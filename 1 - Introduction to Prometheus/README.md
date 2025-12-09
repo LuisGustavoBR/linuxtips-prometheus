@@ -7,6 +7,7 @@ You will learn about the history of Prometheus, including its origins at SoundCl
 
 Finally, we install Prometheus, explore its default configuration, access the web interface, and run our first PromQL query — marking the beginning of our hands-on monitoring journey.
 
+&nbsp;
 ## Why Do We Need Tools Like Prometheus?
 
 Before diving into what monitoring actually is, it’s important to understand the broader context. This helps clarify why Prometheus exists and why monitoring systems are critical for modern environments.
@@ -41,6 +42,7 @@ And that’s without even touching the guest OS inside the VM or the application
 
 Monitoring means knowing what is happening in your infrastructure, applications, and services **in real time**, and ensuring that the appropriate teams are notified when a failure or anomaly occurs. Alerts should contain enough information to support efficient troubleshooting and recovery.
 
+&nbsp;
 #### Monitoring vs Observability
 
 Now that you have a sense of what monitoring means, we can go a bit deeper and introduce the broader concept of **observability** — which enhances our ability to understand and analyze system behavior.
@@ -82,6 +84,7 @@ At this point, you might be asking yourself:
 
 That’s exactly what we’ll cover next.
 
+&nbsp;
 ### What Is Prometheus?
 
 Prometheus is one of the most modern and widely adopted monitoring systems, designed to collect and store metrics from a wide variety of infrastructure components. Development began in 2012 and the project was officially announced by SoundCloud in 2015.  
@@ -107,6 +110,7 @@ And since we’re talking about observability, here are some common tools aligne
 
 Now that we understand monitoring, observability, and what Prometheus actually is, we’re ready to start diving deeper into this amazing tool.
 
+&nbsp;
 ### Prometheus Architecture
 
 I get a diagram of the Prometheus architecture to help us better understand how it works.
@@ -136,3 +140,85 @@ query = 'avg(rate(container_cpu_usage_seconds_total{container_name!="meu-nginx",
 This query returns the average CPU usage rate of all containers that do not have the name "meu-nginx" and are not using the "nginx" image.
 
 A key strength of the Prometheus ecosystem is how easily it integrates with tools such as Grafana, Alertmanager, Zabbix, and many others.
+
+&nbsp;
+### Installing Prometheus
+
+Now that we understand monitoring, observability, and what Prometheus is, it's time to finally start working with the star of this training: **Prometheus**!
+
+There are many ways to install Prometheus. You can run it on a Linux VM, an instance in any cloud provider, or even on a physical on-premises server.  
+It can also run in containers on your local machine using Docker or any other container runtime. And if the goal is to use Prometheus in a production environment, then a container orchestrator such as **Kubernetes** or **Nomad** becomes essential.
+
+We’ll start by installing Prometheus on a Linux machine. This Linux machine could be a VM, a cloud instance, or a bare-metal server—it doesn’t matter.
+
+This will be our first Prometheus installation, so don’t worry: throughout the training we’ll explore other installation methods to ensure you feel completely confident using Prometheus in real environments. Remember, the goal here is to keep the training as close as possible to what you would find in an actual production environment.
+
+&nbsp;
+#### Running Prometheus on a Linux Node
+
+It's important to be familiar with the official Prometheus website, as this is where you'll learn all the details directly from the documentation and follow updates and new features of the project.
+
+Prometheus website: https://prometheus.io/  
+Download page: https://prometheus.io/download/
+
+To run Prometheus on Linux in a way that works across most distributions, we’ll follow these steps:
+
+First, download the Prometheus binary package. There are prebuilt binaries available for Linux, Windows, and macOS.
+
+Inside the `.tar.gz` package you’ll find two binaries: **Prometheus** and **Promtool**.
+
+- **Promtool** is a very handy utility that allows you to execute queries directly from the command line.  
+- The **Prometheus** binary is the actual *Prometheus Server*, responsible for making everything work.
+
+You’ll also find the **consoles**, **console_libraries** directories, and the default configuration file **prometheus.yml**, which we’ll use in this first example.
+
+Now that we understand what each piece is, let’s begin.
+
+Downloading Prometheus:
+
+```bash
+curl -LO https://github.com/prometheus/prometheus/releases/download/v3.8.0/prometheus-3.8.0.linux-amd64.tar.gz
+```
+
+Extract the archive and enter the directory:
+
+```bash
+tar -xvf prometheus-3.8.0.linux-amd64.tar.gz
+cd prometheus-3.8.0.linux-amd64
+```
+
+As mentioned earlier, **prometheus.yml** is the main configuration file and the one we’ll use for our first setup.
+
+Default content:
+
+```yaml
+# my global config
+global:
+  scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+  # scrape_timeout is set to the global default (10s).
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: "prometheus"
+
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+
+    static_configs:
+      - targets: ["localhost:9090"]
+```
