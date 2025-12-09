@@ -74,10 +74,65 @@ And to be completely honest, I would still add **Dashboards** as a fundamental e
 
 If your environment provides visibility across these four pillars, congratulations — you have a solid observability foundation!  
 
-In the examples we discussed earlier, you can see that all four pillars are represented. Go back and check — I bet you noticed it too. 😉
+In the examples we discussed earlier, you can see that all four pillars are represented. Go back and check — I bet you noticed it too.
 
 At this point, you might be asking yourself:
 
 **“So… what does Prometheus have to do with all of this?”**
 
-That’s exactly what we’ll cover next. 😄
+That’s exactly what we’ll cover next.
+
+### What Is Prometheus?
+
+Prometheus is one of the most modern and widely adopted monitoring systems, designed to collect and store metrics from a wide variety of infrastructure components. Development began in 2012 and the project was officially announced by SoundCloud in 2015.  
+Its design was strongly inspired by **Borgmon**, Google’s internal monitoring system responsible for observing **Borg**, Google’s container management platform — which is also known as the predecessor of Kubernetes.
+
+Prometheus is not only a powerful metrics collection engine; it also includes its own **TSDB (Time Series Database)**.  
+I’m not translating “time series database” because “banco de dados temporais” sounds a bit odd in Portuguese — even though it’s technically correct.
+
+A TSDB is a database optimized for storing and querying data points associated with timestamps. It is purpose-built to handle large volumes of time-based information extremely efficiently. This makes it ideal for metrics, where the timestamp is just as important as the value itself — whether you’re retrieving a specific minute of data or ingesting millions of points per hour.
+
+Prometheus also supports highly expressive and powerful queries through **PromQL**, enabling deep correlations between metrics and visualization through dashboards.  
+We will explore all of this throughout the training.
+
+When looking at the pillars of observability, Prometheus fits squarely into the **Metrics** pillar, as its primary role is to collect, store, and expose metrics from different components of your infrastructure.
+
+And since we’re talking about observability, here are some common tools aligned with each pillar:
+
+- **Logs** → Graylog, Datadog  
+- **Metrics** → Prometheus  
+- **Traces** → Jaeger, eBPF  
+- **Events** → Zabbix, Datadog  
+- **Dashboards / Visualization** → Grafana, Datadog, Pixie  
+
+Now that we understand monitoring, observability, and what Prometheus actually is, we’re ready to start diving deeper into this amazing tool.
+
+### Prometheus Architecture
+
+I get a diagram of the Prometheus architecture to help us better understand how it works.
+
+![Prometheus Architecture](prometheus-architecture.gif)
+
+Prometheus is built around three **core** components:
+
+- **Retrieval**
+- **Storage**
+- **PromQL**
+
+**Retrieval** is responsible for collecting metrics and interacting with **Storage** to store them. It also communicates with **Service Discovery** to find available targets from which metrics can be pulled.
+
+**Storage** handles the persistence of metrics in the TSDB (time series database), which is essential for efficient ingestion and querying. Prometheus stores data on the local disk of the node where it runs. So, if Prometheus is running on a VM, the data will be stored on that VM’s disk.
+
+**PromQL** executes user queries and interacts with **Storage** to retrieve the requested metrics. PromQL is a powerful query language, very different from SQL, and specifically designed for time series data.
+
+Throughout the training, we will explore several examples of PromQL queries and understand how it helps us extract meaningful metrics.
+
+Here’s a small example of a PromQL query:
+
+```promql
+query = 'avg(rate(container_cpu_usage_seconds_total{container_name!="meu-nginx",image!="nginx"}[5m]))'
+```
+
+This query returns the average CPU usage rate of all containers that do not have the name "meu-nginx" and are not using the "nginx" image.
+
+A key strength of the Prometheus ecosystem is how easily it integrates with tools such as Grafana, Alertmanager, Zabbix, and many others.
