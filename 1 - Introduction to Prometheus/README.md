@@ -363,3 +363,15 @@ http://localhost:9090
 You should see a beautiful interface like the one below:
 
 ![Prometheus installed on Linux](interface-web-prometheus.png)
+
+&nbsp;
+## End of Module 1:
+
+In Module 1, you learned what monitoring is, how it relates to observability, and what the pillars of observability are.
+You also learned what Prometheus is and how it works.
+
+We installed Prometheus, configured its initial setup, created the service unit, prepared the directory structure, configured the user and group, and accessed the Prometheus web interface to run your first query.
+
+We checked the service status, validated the logs, understood the Prometheus architecture, and enjoyed the diagram I created.
+
+Now it's time to rest and later review everything covered in Module 1.
