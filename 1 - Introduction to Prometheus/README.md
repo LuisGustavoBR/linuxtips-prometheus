@@ -154,7 +154,7 @@ We’ll start by installing Prometheus on a Linux machine. This Linux machine co
 This will be our first Prometheus installation, so don’t worry: throughout the training we’ll explore other installation methods to ensure you feel completely confident using Prometheus in real environments. Remember, the goal here is to keep the training as close as possible to what you would find in an actual production environment.
 
 &nbsp;
-#### Running Prometheus on a Linux Node
+#### Installing Prometheus on Linux
 
 It's important to be familiar with the official Prometheus website, as this is where you'll learn all the details directly from the documentation and follow updates and new features of the project.
 
@@ -174,51 +174,189 @@ You’ll also find the **consoles**, **console_libraries** directories, and the 
 
 Now that we understand what each piece is, let’s begin.
 
+&nbsp;
 Downloading Prometheus:
 
 ```bash
 curl -LO https://github.com/prometheus/prometheus/releases/download/v3.8.0/prometheus-3.8.0.linux-amd64.tar.gz
 ```
 
-Extract the archive and enter the directory:
+&nbsp;
+Extract the archive:
 
 ```bash
 tar -xvf prometheus-3.8.0.linux-amd64.tar.gz
-cd prometheus-3.8.0.linux-amd64
 ```
 
-As mentioned earlier, **prometheus.yml** is the main configuration file and the one we’ll use for our first setup.
+&nbsp;
+Move binaries to /usr/local/bin
 
-Default content:
+```bash
+sudo mv prometheus-3.8.0.linux-amd64/prometheus /usr/local/bin/prometheus
+sudo mv prometheus-3.8.0.linux-amd64/promtool /usr/local/bin/promtool
+```
+
+&nbsp;
+Test the installation:
+
+```bash
+prometheus --version
+
+prometheus, version 3.8.0 (branch: HEAD, revision: e44ed351cdf0181f9fde56ba096f4d949f9e295d)
+  build user:       root@e0c39c41863e
+  build date:       20251202-09:08:25
+  go version:       go1.25.4
+  platform:         linux/amd64
+  tags:             netgo,builtinassets
+```
+
+&nbsp;
+Create configuration directories:
+
+```bash
+sudo mkdir /etc/prometheus
+```
+
+&nbsp;
+Move configuration files:
+
+```bash
+sudo mv prometheus-3.8.0.linux-amd64/prometheus.yml /etc/prometheus/prometheus.yml
+sudo mv prometheus-3.8.0.linux-amd64/consoles /etc/prometheus
+sudo mv prometheus-3.8.0.linux-amd64/console_libraries /etc/prometheus
+```
+
+&nbsp;
+Edit the main configuration file:
+
+```bash
+sudo vim /etc/prometheus/prometheus.yml
+```
+
+&nbsp;
+Recommended configuration:
 
 ```yaml
-# my global config
 global:
-  scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
-  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
-  # scrape_timeout is set to the global default (10s).
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
 
-# Alertmanager configuration
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets:
-          # - alertmanager:9093
-
-# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
 rule_files:
-  # - "first_rules.yml"
-  # - "second_rules.yml"
 
-# A scrape configuration containing exactly one endpoint to scrape:
-# Here it's Prometheus itself.
 scrape_configs:
-  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
   - job_name: "prometheus"
-
-    # metrics_path defaults to '/metrics'
-    # scheme defaults to 'http'.
-
     static_configs:
       - targets: ["localhost:9090"]
+```
+
+&nbsp;
+Create Prometheus data directory:
+
+```bash
+sudo mkdir /var/lib/prometheus
+```
+
+&nbsp;
+Create user and group:
+
+```bash
+sudo addgroup --system prometheus
+sudo adduser --shell /sbin/nologin --system --group prometheus
+```
+
+&nbsp;
+Create the SystemD service unit:
+
+```bash
+sudo vim /etc/systemd/system/prometheus.service
+```
+
+Service file:
+
+```yaml
+[Unit]
+Description=Prometheus
+Documentation=https://prometheus.io/docs/introduction/overview/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=prometheus
+Group=prometheus
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStart=/usr/local/bin/prometheus \
+  --config.file=/etc/prometheus/prometheus.yml \
+  --storage.tsdb.path=/var/lib/prometheus \
+  --web.console.templates=/etc/prometheus/consoles \
+  --web.console.libraries=/etc/prometheus/console_libraries \
+  --web.listen-address=0.0.0.0:9090 \
+  --web.external-url=
+
+SyslogIdentifier=prometheus
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+&nbsp;
+Fix permissions:
+
+```bash
+sudo chown -R prometheus:prometheus /var/log/prometheus
+sudo chown -R prometheus:prometheus /etc/prometheus
+sudo chown -R prometheus:prometheus /var/lib/prometheus
+sudo chown -R prometheus:prometheus /usr/local/bin/prometheus
+sudo chown -R prometheus:prometheus /usr/local/bin/promtool
+```
+
+&nbsp;
+Let's reload **systemd** so the Prometheus service can be initialized:
+
+```bash
+sudo systemctl daemon-reload
+```
+
+&nbsp;
+Now start the Prometheus service:
+
+```bash
+sudo systemctl start prometheus
+```
+
+&nbsp;
+Enable the service to start automatically on system boot:
+
+```bash
+sudo systemctl enable prometheus
+```
+
+&nbsp;
+Check the status of the Prometheus service:
+
+```bash
+sudo systemctl status prometheus
+```
+
+&nbsp;
+You can inspect the logs to ensure everything is running smoothly:
+
+```bash
+sudo journalctl -u prometheus
+```
+
+&nbsp;
+If you see the following message in the logs, it means Prometheus is up and running:
+
+```bash
+level=info msg="Server is ready to receive web requests."
+```
+
+&nbsp;
+To finish, open the Prometheus web interface in your browser:
+
+```bash
+http://localhost:9090
 ```
