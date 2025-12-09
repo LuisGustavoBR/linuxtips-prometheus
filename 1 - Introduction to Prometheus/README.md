@@ -218,12 +218,10 @@ sudo mkdir /etc/prometheus
 ```
 
 &nbsp;
-Move configuration files:
+Move configuration file:
 
 ```bash
 sudo mv prometheus-3.8.0.linux-amd64/prometheus.yml /etc/prometheus/prometheus.yml
-sudo mv prometheus-3.8.0.linux-amd64/consoles /etc/prometheus
-sudo mv prometheus-3.8.0.linux-amd64/console_libraries /etc/prometheus
 ```
 
 &nbsp;
@@ -360,3 +358,8 @@ To finish, open the Prometheus web interface in your browser:
 ```bash
 http://localhost:9090
 ```
+
+&nbsp;
+You should see a beautiful interface like the one below:
+
+![Prometheus installed on Linux](interface-web-prometheus.png)
