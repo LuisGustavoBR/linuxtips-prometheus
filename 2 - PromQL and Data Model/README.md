@@ -337,3 +337,201 @@ curl -s http://localhost:8899/metrics
 ```
 
 ![Print first exporter metrics!](first-export-metrics.png)
+
+&nbsp;
+### Prometheus Targets
+
+Now that our exporter is running beautifully inside a Docker container, let’s add it as a new target for Prometheus. A *target* is simply a host or service that Prometheus scrapes. Every monitored server, app, or exporter is considered a Prometheus **target**.
+
+If you prefer to run your exporter on another machine or VM, just remember to update the address accordingly when adding it to Prometheus.
+
+Before adding our new target, let’s first see which targets are already configured.
+
+You can list the current targets using:
+
+```bash
+curl -s http://localhost:9090/api/v1/targets
+```
+
+&nbsp;
+### Adding Your First Exporter to Prometheus
+
+The first step is to edit the `prometheus.yml` file to add our new exporter.  
+As we know, the `prometheus.yml` file is located in the `/etc/prometheus/` directory.
+
+Open the `prometheus.yml` file and add the following configuration:
+
+```yaml
+global:
+  scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+
+rule_files:
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          app: "prometheus"
+
+  - job_name: "My First Exporter"
+    static_configs:
+      - targets: ["localhost:8899"]
+        labels:
+          app: "luis-gustavo"
+```
+
+After saving the file, restart Prometheus to apply the changes:
+
+```bash
+sudo systemctl restart prometheus
+```
+
+Now let's verify whether our first exporter is correctly configured as a Prometheus target.
+
+Run the following command:
+
+```bash
+curl -s http://localhost:9090/api/v1/targets | jq .
+```
+
+&nbsp;
+
+```json
+{
+  "status": "success",
+  "data": {
+    "activeTargets": [
+      {
+        "discoveredLabels": {
+          "__address__": "localhost:8899",
+          "__metrics_path__": "/metrics",
+          "__scheme__": "http",
+          "__scrape_interval__": "15s",
+          "__scrape_timeout__": "10s",
+          "app": "luis-gustavo",
+          "job": "My First Exporter"
+        },
+        "labels": {
+          "app": "luis-gustavo",
+          "instance": "localhost:8899",
+          "job": "My First Exporter"
+        },
+        "scrapePool": "My First Exporter",
+        "scrapeUrl": "http://localhost:8899/metrics",
+        "globalUrl": "http://k8s-node-2:8899/metrics",
+        "lastError": "",
+        "lastScrape": "2025-12-10T14:44:40.566676657Z",
+        "lastScrapeDuration": 0.016453473,
+        "health": "up",
+        "scrapeInterval": "15s",
+        "scrapeTimeout": "10s"
+      },
+      {
+        "discoveredLabels": {
+          "__address__": "localhost:9090",
+          "__metrics_path__": "/metrics",
+          "__scheme__": "http",
+          "__scrape_interval__": "15s",
+          "__scrape_timeout__": "10s",
+          "app": "prometheus",
+          "job": "prometheus"
+        },
+        "labels": {
+          "app": "prometheus",
+          "instance": "localhost:9090",
+          "job": "prometheus"
+        },
+        "scrapePool": "prometheus",
+        "scrapeUrl": "http://localhost:9090/metrics",
+        "globalUrl": "http://k8s-node-2:9090/metrics",
+        "lastError": "",
+        "lastScrape": "2025-12-10T14:44:40.063556903Z",
+        "lastScrapeDuration": 0.00614898,
+        "health": "up",
+        "scrapeInterval": "15s",
+        "scrapeTimeout": "10s"
+      }
+    ],
+    "droppedTargets": [],
+    "droppedTargetCounts": {
+      "My First Exporter": 0,
+      "prometheus": 0
+    }
+  }
+}
+```
+
+&nbsp;
+### Viewing the Metrics from Our First Exporter
+
+Great! We went through all these steps just to visualize a new metric appearing in Prometheus — in addition to the default metrics that come out of the box.
+
+The metric we created is fully custom and not particularly useful, but it’s important because it helps us understand the full lifecycle of creating a metric from scratch and how Prometheus processes and stores it.
+
+Now that we understand how to build a metric from zero and how Prometheus handles it end-to-end, let's see how we can query it using the Prometheus UI.
+
+Open the Prometheus web interface and run the following query:
+
+```promql
+numero_de_astronautas
+```
+
+![Metric value](prometheus-metric-1.png)
+
+From the command line, you also know how to query it:
+
+```bash
+curl -s "http://localhost:9090/api/v1/query?query=number_of_astronauts" | jq .
+```
+
+You will receive an output similar to this:
+
+```json
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "__name__": "number_of_astronauts",
+          "app": "luis-gustavo",
+          "instance": "localhost:8899",
+          "job": "My First Exporter"
+        },
+        "value": [
+          1765378350.960,
+          "12"
+        ]
+      }
+    ]
+  }
+}
+```
+
+&nbsp;
+Great! Our metric is there!
+
+We can now be more specific by using labels in our queries. For example:
+
+```PROMQL
+number_of_astronauts{instance="localhost:8899",job="My First Exporter"}
+```
+
+The result will be the same, but now filtered using the provided labels.
+
+Can we see the value of this metric for the last 5 minutes?
+
+```PROMQL
+number_of_astronauts{instance="localhost:8899",job="My First Exporter"}[5m]
+```
+
+![Metric value](prometheus-metric-2.png)
+
+&nbsp;
+The value doesn’t change, since it’s not exactly easy to change the number of astronauts on the ISS.
+
+
+
