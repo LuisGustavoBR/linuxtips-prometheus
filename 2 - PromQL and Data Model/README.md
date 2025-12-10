@@ -89,3 +89,79 @@ The output looks like this:
 }
 ```
 
+Now let’s understand what is actually happening.
+
+&nbsp;
+### What did Prometheus return?
+
+Let’s break down the result into parts so everything becomes clearer.
+
+Prometheus always returns data following a consistent structure, and once you understand this pattern, reading any metric becomes much easier.
+
+The result is divided into **two main components**:
+
+---
+
+### **1. The *identifier***  
+This includes the **metric name** you queried and all associated **labels**.  
+Labels provide context and allow you to filter metrics more precisely. For example, you can query the same metric with different label values, such as `instance="localhost:9090"`, `instance="webserver-01"`, or `instance="webserver-02"`.
+
+---
+
+### **2. The *value***  
+This is the current value of the metric — the latest data point collected by Prometheus.
+
+---
+
+To make this easier to visualize, imagine the metric divided into these sections:  
+- the metric name  
+- its labels  
+- the actual metric value  
+
+This structure is the foundation of the Prometheus data model.
+
+![Data Model Prometheus](data-model-prometheus-1.jpg)
+
+If you zoom in on the diagram, you’ll notice that the result is subdivided into even more pieces. Besides the metric name, we also have the labels with their respective values, and finally the current value of the metric.
+
+Take a look at this other diagram:
+
+![Data Model Prometheus](data-model-prometheus-2.jpg)
+
+What we can understand by looking at this query result is that our server is running — meaning Prometheus is working correctly. Notice that the result only shows the value **`1`**; it doesn’t tell us how long it has been running. It only reflects the *current* state. A value of **`1`** means the server is up, and a value of **`0`** would mean the server is down.
+
+If we want to check the value of the `up` metric for the Prometheus server over the *last hour*, we need to express that in our query, which becomes:
+
+```promql
+up{instance="localhost:9090", job="prometheus"}[1h]
+```
+
+In this case, we are specifying that we want the values of the `up` metric from the `localhost:9090` server, under the `prometheus` job, for the **last hour** — we’re being very specific. :)
+
+To request metrics from the last hour, we use the `[1h]` parameter at the end of the query.  
+You can use:
+
+- `h` for hours  
+- `d` for days  
+- `w` for weeks  
+- `m` for months  
+- `y` for years
+
+![Data Model Prometheus](query-prometheus-1.jpg)
+
+The result was huge, right?  
+And you're wondering why?
+
+Remember that we configured Prometheus to perform a *scrape* every **15 seconds**.  
+So, when you request the last **1 hour** of data, Prometheus returns **many points**, one for each scrape.
+
+Here’s just the first result so you can understand it better:
+
+```
+up{instance="localhost:9090", job="prometheus"} 1 @1661595094.114
+```
+
+Notice that now we have `@1661595094.114`, which is the **timestamp** of the scrape — the exact moment when that metric value was collected.
+
+Now that we understand the data model returned by Prometheus, we can move forward and start exploring and simplifying queries using the powerful Prometheus query language: **PromQL**!
+
