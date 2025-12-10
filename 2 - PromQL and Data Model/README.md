@@ -533,5 +533,196 @@ number_of_astronauts{instance="localhost:8899",job="My First Exporter"}[5m]
 &nbsp;
 The value doesn’t change, since it’s not exactly easy to change the number of astronauts on the ISS.
 
+&nbsp;
+### Adding Another Metric
+
+Now, what if we want to add one more metric?
+
+Let’s imagine that we also want to know where the International Space Station (ISS) is at this very moment.
+Yes, I know it’s in space…
+
+But what we really want is to know which part of planet Earth it is flying over right now.
+
+The open-notify API provides this information.
+So let’s add this new metric to our exporter.
+
+To do that, open your Python script (exporter.py) and add the new configuration.
+
+&nbsp;
+
+```python
+import requests  # Imports the requests module to make HTTP requests
+import json  # Imports the json module to convert the result into JSON
+import time  # Imports the time module for sleep
+from prometheus_client import start_http_server, Gauge  # Imports Prometheus modules
+
+url_people_count = 'http://api.open-notify.org/astros.json'  # URL to get the number of astronauts
+url_iss_location = 'http://api.open-notify.org/iss-now.json'  # URL to get the ISS location
+
+def get_iss_location():  # Function to get the ISS location
+    try:
+        """
+        Get the location of the International Space Station
+        """
+        response = requests.get(url_iss_location)  # Makes the request
+        data = response.json()  # Converts to JSON
+        return data['iss_position']  # Returns the ISS position
+    except Exception as e:
+        print("Could not access the URL!")  # Error message
+        raise e
+
+def get_astronaut_count():  # Function to get the number of astronauts
+    try:
+        """
+        Get the current number of astronauts in space
+        """
+        response = requests.get(url_people_count)  # Makes the HTTP request
+        data = response.json()  # Converts to JSON
+        return data['number']  # Returns astronaut count
+    except Exception as e:
+        print("Could not access the URL!")  # Error message
+        raise e
+
+def update_metrics():  # Function to update metrics
+    try:
+        """
+        Update metrics with astronaut count and ISS location
+        """
+        astronaut_count = Gauge('astronaut_count', 'Number of astronauts in space')  # Astronaut metric
+        iss_longitude = Gauge('iss_longitude', 'Longitude of the International Space Station')  # ISS longitude
+        iss_latitude = Gauge('iss_latitude', 'Latitude of the International Space Station')  # ISS latitude
+
+        while True:
+            astronaut_count.set(get_astronaut_count())  # Updates astronaut metric
+            iss_longitude.set(get_iss_location()['longitude'])  # Updates ISS longitude
+            iss_latitude.set(get_iss_location()['latitude'])  # Updates ISS latitude
+            time.sleep(10)  # Sleep 10 seconds
+            print("Current number of astronauts in space: %s" % get_astronaut_count())  # Print count
+            print("Current ISS longitude: %s" % get_iss_location()['longitude'])  # Print longitude
+            print("Current ISS latitude: %s" % get_iss_location()['latitude'])  # Print latitude
+    except Exception as e:
+        print("Failed to update metrics! \n\n====> %s \n" % e)  # Error
+        raise e
+        
+def start_exporter():  # Function to start the exporter
+    try:
+        """
+        Start the exporter
+        """
+        start_http_server(8899)  # Starts server on port 8899
+        return True
+    except Exception as e:
+        print("The server could not be started!")  # Error message
+        raise e
+
+def main():  # Main function
+    try:
+        start_exporter()  # Starts exporter
+        print('Exporter Started')  # Status message
+        update_metrics()  # Updates metrics
+    except Exception as e:
+        print('\nExporter Failed and Was Terminated! \n\n======> %s\n' % e)  # Error message
+        exit(1)
 
 
+if __name__ == '__main__':
+    main()
+    exit(0)
+```
+
+Very well, we’ve already added the new instructions to our exporter.  
+Basically, we told the `prometheus_client` library that we now have two new metrics:
+
+- **longitude_ISS**: Longitude of the International Space Station  
+- **latitude_ISS**: Latitude of the International Space Station  
+
+&nbsp;
+
+Let’s run our script to check if everything is working properly:
+
+```bash
+python3 exporter-2.py
+
+The current number of astronauts in space is: 12
+The current longitude of the International Space Station is: 57.7301
+The current latitude of the International Space Station is: -32.7545
+```
+
+Let's check whether our metrics are reaching Prometheus.  
+First, let's verify `longitude_ISS`:
+
+```bash
+curl -s http://localhost:9090/api/v1/query\?query\=longitude_ISS | jq .
+```
+
+Now let’s check latitude_ISS:
+
+```bash
+curl -s http://localhost:9090/api/v1/query\?query\=latitude_ISS | jq .
+```
+
+&nbsp;
+# Understanding Prometheus Metric Types
+
+When we break things down, we like to dig deep and understand everything needed to truly master a topic. With Prometheus, it’s no different, we want you to learn it in a way that prepares you for real challenges in modern tech environments.
+
+When we created our first exporter, we used only the `gauge` type. Now let’s explore the main metric types available in Prometheus.
+
+&nbsp;
+## **gauge – Variable Value**
+
+A `gauge` is used for values that can **increase or decrease**, such as temperature, CPU usage, memory usage, or queue size.
+
+Example:
+
+```memory_usage{instance="localhost:8899", job="First Exporter"}```
+
+&nbsp;
+## **counter – Increasing Value**
+
+A `counter` is a metric that **only increases**, commonly used to track errors, requests, or continuous events.  
+It usually ends with the `_total` suffix.
+
+Example:
+
+```requests_total{instance="localhost:8899", job="First Exporter"}```
+
+&nbsp;
+## **histogram – Distribution in Buckets**
+
+A `histogram` allows measuring values distributed across **predefined buckets**, such as application response times.  
+Buckets are defined using the `le` (less or equal) label.
+
+Example:
+
+```requests_duration_seconds_bucket{le="0.5"}```
+
+Important suffixes:
+- `_bucket` — value count per bucket  
+- `_count` — total number of observations  
+- `_sum` — sum of all observed values  
+
+Strength: very flexible queries.  
+Weakness: slightly less precise than `summary`.
+
+&nbsp;
+## **summary – Quantile-Based Metrics**
+
+A `summary` is similar to a histogram, but uses **quantiles** (0–1) instead of buckets.  
+It offers high precision but less flexibility, because quantiles and windows must be defined at creation time.
+
+Example:
+
+```requests_duration_seconds_sum{instance="localhost:8899", job="First Exporter"}```
+
+Strength: excellent precision.  
+Weakness: cannot aggregate multiple summaries and lacks histogram flexibility.
+
+&nbsp;
+## Wrapping Up
+
+In our first exporter, we only used `gauge` metrics because we wanted to expose the number of astronauts in space and the ISS coordinates over time — both values that naturally rise and fall.
+
+Makes sense now, right?
+
+Soon, we’ll create exporters using other metric types, but for now, let’s focus on building more queries.
