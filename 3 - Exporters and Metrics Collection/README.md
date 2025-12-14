@@ -262,3 +262,25 @@ rate(prometheus_http_requests_total{job="prometheus",handler="/api/v1/query"}[5m
 ```
 
 Here, we are calculating the average per-second growth rate of the `prometheus_http_requests_total` metric, filtering by `job` and `handler`, over a 5-minute interval. In this case, the goal is to understand the growth of queries being made to Prometheus.
+
+&nbsp;
+#### The *irate* function
+
+The `irate` function represents the **per-second growth rate** of a given metric, but unlike the `rate` function, `irate` does **not** calculate an average over the interval. Instead, it uses **only the last two data points** to calculate the growth rate.
+
+When visualized in a graph, you can clearly see the difference between `rate` and `irate`:  
+while the graph using `rate` is smoother, the graph using `irate` is more **“spiky”**, making rises and drops much more noticeable.
+
+```PROMQL
+irate(metric[5m])
+```
+
+Where `metric` is the metric for which you want to calculate the growth rate, considering only the last two data points within a 5-minute interval.
+
+Let’s look at a real example:
+
+```PROMQL
+irate(prometheus_http_requests_total{job="prometheus",handler="/api/v1/query"}[5m])
+```
+
+Here, we are calculating the per-second growth rate of the `prometheus_http_requests_total` metric, considering only the last two data points, filtering by `job` and `handler`, over a 5-minute interval. In this case, the goal is to understand the growth of queries being made to Prometheus.
