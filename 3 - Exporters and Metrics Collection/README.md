@@ -284,3 +284,52 @@ irate(prometheus_http_requests_total{job="prometheus",handler="/api/v1/query"}[5
 ```
 
 Here, we are calculating the per-second growth rate of the `prometheus_http_requests_total` metric, considering only the last two data points, filtering by `job` and `handler`, over a 5-minute interval. In this case, the goal is to understand the growth of queries being made to Prometheus.
+
+&nbsp;
+#### The *delta* function
+
+The `delta` function represents the **difference between the current value and the previous value** of a metric over a given time range.
+
+When we talk about `delta`, a common example is disk usage. For instance, if you want to know **how much disk was used during a specific time interval**, you can use the `delta` function to calculate the difference between the current and the previous value.
+
+```PROMQL
+delta(metric[5m])
+```
+
+Where `metric` is the metric for which you want to calculate the difference between the current and previous values over a 5-minute interval.
+
+Let’s look at a real example:
+
+```PROMQL
+delta(prometheus_http_response_size_bytes_count{job="prometheus",handler="/api/v1/query"}[5m])
+```
+
+Here, we are calculating the difference between the current and previous values of the `prometheus_http_response_size_bytes_count` metric, filtering by `job` and `handler`, over a 5-minute interval.  
+In this case, the goal is to understand how many bytes are being consumed by the queries made to Prometheus.
+
+&nbsp;
+#### The *increase* function
+
+Similar to the `delta` function, the `increase` function represents the **difference between the first and last values** over a given time range.  
+The key difference is that `increase` assumes the metric is a **counter**, meaning the value is incremented every time the metric is updated.
+
+It starts at `0` and keeps adding up as the metric increases.
+
+You can probably already guess which type of metric this function works with, right?  
+Exactly: **Counter**.
+
+```PROMQL
+increase(metric[5m])
+```
+
+Where `metric` is the metric for which you want to calculate the difference between the first and last values over a 5-minute interval.
+
+Let’s look at a real example:
+
+```PROMQL
+increase(prometheus_http_requests_total{job="prometheus",handler="/api/v1/query"}[5m])
+```
+
+Here, we are calculating the difference between the first and last values of the `prometheus_http_requests_total` metric, filtering by `job` and `handler`, over a 5-minute interval.
+
+You can follow the result of this query by clicking on `Graph` and then `Execute`. This will display a graph with the query result, making it much easier to understand the behavior of the metric.
