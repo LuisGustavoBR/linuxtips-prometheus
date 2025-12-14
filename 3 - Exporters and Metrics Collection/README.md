@@ -231,8 +231,34 @@ systemctl restart prometheus
 
 Our new target is now listed:
 
-![Prometheus with 03 targets](images/targets.png)
+![Prometheus with 03 targets](targets.png)
 
 And our new metrics are available as well:
 
-![Prometheus total memory metric](images/total-memory-metric.png)
+![Prometheus total memory metric](total-memory-metric.png)
+
+&nbsp;
+### Functions
+
+One very important thing is to feel comfortable using **PromQL**, because it is through it that we extract the maximum value from our metrics and from the amazing world of **time series**.
+
+Let’s get to know some functions to build more effective queries. I’ll list a few here, and we’ll discover other functions as we move forward.
+
+&nbsp;
+#### The *rate* function
+
+The `rate` function represents the **per-second average growth rate** of a given metric over a specific time interval.
+
+```PROMQL
+rate(metric)[5m]
+```
+
+Where `metric` is the metric you want to calculate the growth rate for over a 5-minute interval. You can use the `rate` function with both **gauge** and **counter** metrics.
+
+Let’s look at a real example:
+
+```PROMQL
+rate(prometheus_http_requests_total{job="prometheus",handler="/api/v1/query"}[5m])
+```
+
+Here, we are calculating the average per-second growth rate of the `prometheus_http_requests_total` metric, filtering by `job` and `handler`, over a 5-minute interval. In this case, the goal is to understand the growth of queries being made to Prometheus.
