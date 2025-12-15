@@ -589,3 +589,197 @@ quantile(0.95, prometheus_http_request_duration_seconds_bucket)
 
 Here, we are calculating the 95th percentile of the `prometheus_http_request_duration_seconds_bucket` metric.  
 This allows us to understand the response time for 95% of the requests.
+
+&nbsp;
+### Operators
+
+We need to talk about **operators**, they are extremely important to unlock even more power from our beloved PromQL and obtain more meaningful and interesting results.
+
+Let’s get to know some of them.
+
+&nbsp;
+#### Equality operator
+
+The equality operator is used to compare whether two values are equal.
+
+```PROMQL
+metric == 1
+```
+
+Where `metric` is the metric you want to compare and `1` is the value you are comparing against.  
+If the metric value is equal to `1`, the result will be **true**.
+
+&nbsp;
+#### Not equal operator
+
+The not equal operator is used to compare whether two values are different.
+
+```PROMQL
+metric != 1
+```
+
+Where `metric` is the metric you want to compare and `1` is the value you are comparing against.  
+If the metric value is different from `1`, the result will be **true**.
+
+&nbsp;
+#### Greater than operator
+
+The greater than operator is used to compare whether one value is greater than another.
+
+```PROMQL
+metric > 1
+```
+
+Where `metric` is the metric you want to compare and `1` is the value you are comparing against.  
+If the metric value is greater than `1`, the result will be **true**.
+
+&nbsp;
+#### Less than operator
+
+The less than operator is used to compare whether one value is less than another.
+
+```PROMQL
+metric < 1
+```
+
+Where `metric` is the metric you want to compare and `1` is the value you are comparing against.  
+If the metric value is less than `1`, the result will be **true**.
+
+&nbsp;
+#### Greater than or equal operator
+
+The greater than or equal operator is used to compare whether one value is greater than or equal to another.
+
+```PROMQL
+metric >= 1
+```
+
+Where `metric` is the metric you want to compare and `1` is the value you are comparing against.  
+If the metric value is greater than or equal to `1`, the result will be **true**.
+
+&nbsp;
+#### Less than or equal operator
+
+The less than or equal operator is used to compare whether one value is less than or equal to another.
+
+```PROMQL
+metric <= 1
+```
+
+Where `metric` is the metric you want to compare and `1` is the value you are comparing against.  
+If the metric value is less than or equal to `1`, the result will be **true**.
+
+&nbsp;
+#### Multiplication operator
+
+The multiplication operator is used to multiply two values.
+
+```PROMQL
+metric * 1
+```
+
+Where `metric` is the metric you want to multiply and `1` is the value used in the multiplication.  
+If the metric value is multiplied by `1`, the result will be the same value of the metric.
+
+&nbsp;
+#### Division operator
+
+The division operator is used to divide two values.
+
+```PROMQL
+metric / 1
+```
+
+Where `metric` is the metric you want to divide and `1` is the divisor.  
+The result will be the metric value divided by the provided value.
+
+&nbsp;
+#### Addition operator
+
+The addition operator is used to add two values.
+
+```PROMQL
+metric + 1
+```
+
+Where `metric` is the metric you want to add to and `1` is the value you want to add.  
+The result will be the metric value plus the given value.
+
+&nbsp;
+#### Subtraction operator
+
+The subtraction operator is used to subtract one value from another.
+
+```PROMQL
+metric - 1
+```
+
+Where `metric` is the metric you want to subtract from and `1` is the value to subtract.  
+The result will be the metric value minus the given value.
+
+&nbsp;
+#### Modulo operator
+
+The modulo operator is used to get the remainder of a division between two values.
+
+```PROMQL
+metric % 1
+```
+
+Where `metric` is the metric for which you want the remainder and `1` is the divisor.  
+The result will be the remainder of the division.
+
+&nbsp;
+#### Exponentiation operator
+
+The exponentiation operator is used to raise a value to a power.
+
+```PROMQL
+metric ^ 1
+```
+
+Where `metric` is the metric you want to raise and `1` is the exponent.  
+The result will be the metric value raised to the given power.
+
+&nbsp;
+#### Grouping operator
+
+The grouping operator is used to group expressions.
+
+```PROMQL
+(metric + 1) / 2
+```
+
+Notice that the parentheses are used to group the expression `(metric + 1)`.  
+This part of the expression is evaluated first, and then the result is divided by `2`.
+
+&nbsp;
+#### String concatenation operator
+
+The concatenation operator is used to concatenate strings.
+
+```PROMQL
+"string_a" + "string_b"
+```
+
+Where `string_a` is the first string and `string_b` is the second string.  
+The result will be a single string containing both values concatenated.
+
+&nbsp;
+#### String comparison operator
+
+The string comparison operator is used to compare whether two strings are equal.
+
+```PROMQL
+"string_a" == "string_b"
+```
+
+Where `string_a` is the first string and `string_b` is the second string.  
+The result will be **true** if both strings are equal.
+
+&nbsp;
+#### Enough operators for today
+
+As you continue your studies, you will notice how powerful these operators are for building more complex expressions and creating more precise alerts.
+
+There are still some operators that were not covered here, but you can find them in the official Prometheus documentation and throughout the rest of this training.
