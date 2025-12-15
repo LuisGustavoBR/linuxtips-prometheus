@@ -333,3 +333,259 @@ increase(prometheus_http_requests_total{job="prometheus",handler="/api/v1/query"
 Here, we are calculating the difference between the first and last values of the `prometheus_http_requests_total` metric, filtering by `job` and `handler`, over a 5-minute interval.
 
 You can follow the result of this query by clicking on `Graph` and then `Execute`. This will display a graph with the query result, making it much easier to understand the behavior of the metric.
+
+&nbsp;
+#### The *sum* function
+
+The `sum` function represents the **sum of all values** of a metric.  
+You can use the `sum` function with `counter`, `gauge`, `histogram`, and `summary` metric types.
+
+A common use case for the `sum` function is when you want to know **how much memory is being used by all your containers**, or **how much memory is being used by all your pods**.
+
+```PROMQL
+sum(metric)
+```
+
+Where `metric` is the metric you want to sum.
+
+Let’s look at a real example:
+
+```PROMQL
+sum(go_memstats_alloc_bytes{job="prometheus"})
+```
+
+Here, we are summing all values of the `go_memstats_alloc_bytes` metric, filtering by `job`.
+
+&nbsp;
+#### The *count* function
+
+Another widely used function is `count`, which represents the **number of elements** in a metric.  
+You can use the `count` function with `counter`, `gauge`, `histogram`, and `summary` metric types.
+
+A common use case is when you want to know **how many containers are running at a given moment** or **how many pods are currently running**.
+
+```PROMQL
+count(metric)
+```
+
+Where `metric` is the metric you want to count.
+
+Let’s look at a real example:
+
+```PROMQL
+count(prometheus_http_requests_total)
+```
+
+The result will be the number of values that the `prometheus_http_requests_total` metric has.
+
+&nbsp;
+#### The *avg* function
+
+The `avg` function represents the **average value** of a metric.  
+You can use the `avg` function with `counter`, `gauge`, `histogram`, and `summary` metric types.
+
+This is one of the most commonly used functions, since it is very common to want to know the **average value** of a metric, such as the average memory usage of a container.
+
+```PROMQL
+avg(metric)
+```
+
+Where `metric` is the metric for which you want to calculate the average.
+
+&nbsp;
+#### The *min* function
+
+The `min` function represents the **minimum value** of a metric.  
+You can use the `min` function with `counter`, `gauge`, `histogram`, and `summary` metric types.
+
+A common use case is when you want to know the **lowest memory usage** of a container.
+
+```PROMQL
+min(metric)
+```
+
+Where `metric` is the metric for which you want to calculate the minimum value.
+
+&nbsp;
+#### The *max* function
+
+The `max` function represents the **maximum value** of a metric.  
+A common use case is when you want to know the **highest memory usage across the nodes of a Kubernetes cluster**.
+
+```PROMQL
+max(metric)
+```
+
+Where `metric` is the metric for which you want to calculate the maximum value.
+
+&nbsp;
+#### The *avg_over_time* function
+
+The `avg_over_time` function represents the **average value of a metric over a time range**.
+
+It is commonly used to calculate averages over time, such as the average number of requests per second over a given interval, or even the average number of people in space over the last year.
+
+```PROMQL
+avg_over_time(metric[5m])
+```
+
+Where `metric` is the metric for which you want to calculate the average over a 5-minute interval.
+
+Let’s look at a real example:
+
+```PROMQL
+avg_over_time(prometheus_http_requests_total{handler="/api/v1/query"}[5m])
+```
+
+Here, we are calculating the average of the `prometheus_http_requests_total` metric, filtering by `handler`, over a 5-minute interval.
+
+&nbsp;
+#### The *sum_over_time* function
+
+The `sum_over_time` function represents the **sum of a metric over a time range**.  
+While `avg_over_time` calculates the average, `sum_over_time` calculates the total sum of values over the interval.
+
+For example, you might calculate the total number of requests over a period of time, or the total number of people in space over the last year.
+
+```PROMQL
+sum_over_time(metric[5m])
+```
+
+Where `metric` is the metric for which you want to calculate the sum over a 5-minute interval.
+
+Let’s look at a real example:
+
+```PROMQL
+sum_over_time(prometheus_http_requests_total{handler="/api/v1/query"}[5m])
+```
+
+Here, we are calculating the sum of the `prometheus_http_requests_total` metric, filtering by `handler`, over a 5-minute interval.
+
+&nbsp;
+#### The *max_over_time* function
+
+The `max_over_time` function represents the **maximum value of a metric over a time range**.
+
+```PROMQL
+max_over_time(metric[5m])
+```
+
+Where `metric` is the metric for which you want to calculate the maximum value over a 5-minute interval.
+
+Let’s look at a real example:
+
+```PROMQL
+max_over_time(prometheus_http_requests_total{handler="/api/v1/query"}[5m])
+```
+
+Here, we are retrieving the maximum value of the `prometheus_http_requests_total` metric, filtering by `handler`, over a 5-minute interval.
+
+&nbsp;
+#### The *min_over_time* function
+
+The `min_over_time` function represents the **minimum value of a metric over a time range**.
+
+```PROMQL
+min_over_time(metric[5m])
+```
+
+Where `metric` is the metric for which you want to calculate the minimum value over a 5-minute interval.
+
+Let’s look at a real example:
+
+```PROMQL
+min_over_time(prometheus_http_requests_total{handler="/api/v1/query"}[5m])
+```
+
+Here, we are retrieving the minimum value of the `prometheus_http_requests_total` metric, filtering by `handler`, over a 5-minute interval.
+
+&nbsp;
+#### The *stddev_over_time* function
+
+The `stddev_over_time` function represents the **standard deviation** of a metric over a time range.  
+Standard deviation shows how far values are from the average and is very useful for detecting anomalies, such as unexpected spikes in disk usage.
+
+```PROMQL
+stddev_over_time(metric[5m])
+```
+
+Where `metric` is the metric for which you want to calculate the standard deviation over a 5-minute interval.
+
+Let’s look at a real example:
+
+```PROMQL
+stddev_over_time(prometheus_http_requests_total{handler="/api/v1/query"}[10m])
+```
+
+Here, we are calculating the standard deviation of the `prometheus_http_requests_total` metric, filtering by `handler`, over a 10-minute interval.  
+It is highly recommended to check the graph view, as it makes visualizing deviations much easier.
+
+&nbsp;
+#### The *by* function
+
+The powerful and widely used `by` function is used to **group metrics by labels**.
+
+For example, if you want to group all metrics by the `job` label, you can use `by` like this:
+
+```PROMQL
+sum(metric) by (job)
+```
+
+Where `metric` is the metric you want to group and `job` is the label used for grouping.
+
+Let’s look at a real example:
+
+```PROMQL
+sum(prometheus_http_requests_total) by (code)
+```
+
+Here, we are summing the `prometheus_http_requests_total` metric and grouping it by the `code` label.  
+This allows us to see how many requests were made per HTTP response code.
+
+&nbsp;
+#### The *without* function
+
+The `without` function is used to **remove labels from a metric**.  
+You can use `without` with `counter`, `gauge`, `histogram`, and `summary` metric types, and it is often used together with the `sum` function.
+
+For example, if you want to remove the `job` label from a metric, you can do the following:
+
+```PROMQL
+sum(metric) without (job)
+```
+
+Where `metric` is the metric from which you want to remove the `job` label.
+
+Let’s look at a real example:
+
+```PROMQL
+sum(prometheus_http_requests_total) without (handler)
+```
+
+Here, we are summing the `prometheus_http_requests_total` metric and removing the `handler` label.  
+This gives us a more general view of the total number of requests by response code, without focusing on which handler was used.
+
+&nbsp;
+#### The *histogram_quantile* and *quantile* functions
+
+The `histogram_quantile` and `quantile` functions are very similar, but they are used with different metric types:
+
+- `histogram_quantile` is used with **histogram** metrics
+- `quantile` is used with **summary** metrics
+
+These functions are commonly used to calculate **percentiles** of a metric.
+
+```PROMQL
+quantile(0.95, metric)
+```
+
+Where `metric` is the metric for which you want to calculate the percentile, and `0.95` represents the 95th percentile.
+
+Let’s look at a real example:
+
+```PROMQL
+quantile(0.95, prometheus_http_request_duration_seconds_bucket)
+```
+
+Here, we are calculating the 95th percentile of the `prometheus_http_request_duration_seconds_bucket` metric.  
+This allows us to understand the response time for 95% of the requests.
