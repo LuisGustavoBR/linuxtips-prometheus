@@ -1175,7 +1175,7 @@ Now that we know how to collect Node Exporter metrics, let’s run some queries.
 ### 1. How many CPUs does my machine have?
 
 ```bash
-count(node_cpu_seconds_total{job='node_exporter', mode='idle'})
+count(node_cpu_seconds_total{job='Node Exporter', mode='idle'})
 ```
 
 This query counts how many `node_cpu_seconds_total` metrics exist with `mode="idle"`. The result represents the number of CPUs on the machine.
@@ -1184,7 +1184,7 @@ This query counts how many `node_cpu_seconds_total` metrics exist with `mode="id
 ### 2. What is the CPU usage percentage?
 
 ```bash
-100 - avg by (cpu) (irate(node_cpu_seconds_total{job='node_exporter', mode='idle'}[5m])) * 100
+100 - avg by (cpu) (irate(node_cpu_seconds_total{job='Node Exporter', mode='idle'}[5m])) * 100
 ```
 
 This query calculates CPU usage by subtracting idle time from 100%, using a 5-minute `irate`.
