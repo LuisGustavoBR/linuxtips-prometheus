@@ -783,3 +783,437 @@ The result will be **true** if both strings are equal.
 As you continue your studies, you will notice how powerful these operators are for building more complex expressions and creating more precise alerts.
 
 There are still some operators that were not covered here, but you can find them in the official Prometheus documentation and throughout the rest of this training.
+
+&nbsp;
+### Node Exporter
+
+We need to talk about the most famous exporter in the Prometheus universe: the amazing **Node Exporter**.  
+With Node Exporter, you can collect metrics from a Linux server or macOS machines, such as CPU usage, disk usage, memory consumption, open files, and much more.
+
+Node Exporter is an open-source project written in Go. It runs on Linux as a service and collects and exposes operating system metrics.
+
+&nbsp;
+#### Collectors
+
+Node Exporter has **collectors**, which are responsible for capturing operating system metrics.  
+By default, Node Exporter comes with many collectors enabled, but you can enable others if needed.
+
+To check the list of collectors enabled by default, visit:
+
+[List of collectors enabled by default](https://github.com/prometheus/node_exporter#enabled-by-default)
+
+&nbsp;
+There is also a list of collectors that are disabled by default:
+
+[List of collectors disabled by default](https://github.com/prometheus/node_exporter#disabled-by-default)
+
+&nbsp;
+Here are some very useful collectors:
+
+* `arp`: Collects ARP (Address Resolution Protocol) metrics, such as the number of ARP entries and ARP resolutions.
+* `bonding`: Collects metrics from bonded network interfaces.
+* `conntrack`: Collects Netfilter connection metrics, such as the number of active and tracked connections.
+* `cpu`: Collects CPU metrics.
+* `diskstats`: Collects disk I/O metrics, such as read and write operations.
+* `filefd`: Collects metrics about open file descriptors.
+* `filesystem`: Collects filesystem metrics, such as size and usage.
+* `hwmon`: Collects hardware metrics, such as temperature.
+* `ipvs`: Collects IPVS metrics.
+* `loadavg`: Collects system load average metrics.
+* `mdadm`: Collects RAID metrics, such as the number of active disks.
+* `meminfo`: Collects memory metrics, such as memory usage, buffers, and cache.
+* `netdev`: Collects network metrics, such as received and transmitted packets.
+* `netstat`: Collects network metrics, such as TCP and UDP connections.
+* `os`: Collects operating system metrics.
+* `selinux`: Collects SELinux metrics, such as status and policies.
+* `sockstat`: Collects socket metrics.
+* `stat`: Collects system statistics, such as uptime and forks.
+* `time`: Collects time-related metrics, such as clock synchronization.
+* `uname`: Collects system information metrics.
+* `vmstat`: Collects virtual memory metrics.
+
+Later on, we will see how to enable or disable collectors in Node Exporter.
+
+&nbsp;
+#### Installing Node Exporter on Linux
+
+Let’s install Node Exporter so we can have even more metrics to play with in Prometheus — and, of course, get to know this exporter that is basically the default choice in most environments when it comes to Linux server metrics.
+
+Node Exporter is a single binary that must be downloaded from the official project website.
+
+Below is the download URL for Node Exporter:
+
+```bash
+https://prometheus.io/download/#node_exporter
+```
+
+Access the URL and check the latest available version.  
+At the time of writing this material, the latest version is **1.10.2**.
+
+Let’s download the Node Exporter binary:
+
+```bash
+wget https://github.com/prometheus/node_exporter/releases/download/v1.10.2/node_exporter-1.10.2.linux-amd64.tar.gz
+```
+
+Now let’s extract the file:
+
+```bash
+tar -xvzf node_exporter-1.10.2.linux-amd64.tar.gz
+```
+
+As mentioned before, Node Exporter is just a Go binary, so installing it on a Linux machine is very straightforward.  
+Basically, we will follow the same process used to install Prometheus.
+
+Let’s move the `node_exporter` binary to `/usr/local/bin`:
+
+```bash
+sudo mv node_exporter-1.10.2.linux-amd64/node_exporter /usr/local/bin/
+```
+
+Let’s verify that everything is working correctly:
+
+```bash
+node_exporter --version
+```
+
+The output should look similar to this:
+
+```bash
+node_exporter, version 1.10.2 (branch: HEAD, revision: 654f19dee6a0c41de78a8d6d870e8c742cdb43b9)
+  build user:       root@b29b4019149a
+  build date:       20251025-20:05:32
+  go version:       go1.25.3
+  platform:         linux/amd64
+  tags:             unknown
+```
+
+All good — let’s continue with the installation.
+
+Now let’s create the `node_exporter` user, which will be responsible for running the service:
+
+```bash
+sudo addgroup --system node_exporter
+sudo adduser --shell /sbin/nologin --system --group node_exporter
+```
+
+Now let’s create the Node Exporter systemd service file:
+
+```bash
+sudo vim /etc/systemd/system/node_exporter.service
+```
+
+Add the following content:
+
+```bash
+[Unit]
+Description=Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+Type=simple
+ExecStart=/usr/local/bin/node_exporter
+
+[Install]
+WantedBy=multi-user.target
+```
+
+As you already know, every time we add a new systemd service, we need to reload systemd:
+
+```bash
+sudo systemctl daemon-reload
+```
+
+Now let’s start the service:
+
+```bash
+sudo systemctl start node_exporter
+```
+
+Let’s check if everything is running smoothly:
+
+```bash
+sudo systemctl status node_exporter
+```
+
+It’s always great to see this output when creating and starting a new service:
+
+```bash
+Loaded: loaded (/etc/systemd/system/node_exporter.service; enabled; preset: enabled)
+     Active: active (running) since Tue 2025-12-16 23:01:00 UTC; 5min ago
+   Main PID: 821 (node_exporter)
+      Tasks: 7 (limit: 9433)
+     Memory: 22.9M (peak: 24.1M)
+        CPU: 848ms
+     CGroup: /system.slice/node_exporter.service
+             └─821 /usr/local/bin/node_exporter
+```
+
+Our beloved Node Exporter is running!  
+Now let’s enable the service so it starts automatically when the server reboots:
+
+```bash
+sudo systemctl enable node_exporter
+```
+
+It’s important to mention that Node Exporter runs on port **9100**.  
+To access the collected metrics, simply open:
+
+```bash
+http://localhost:9100/metrics
+```
+
+Before checking the metrics, let’s confirm that Node Exporter is listening on port 9100.  
+We can use the `ss` command to check open TCP and UDP connections:
+
+```bash
+ss -atunp | grep 9100
+```
+
+The output should look like this:
+
+```bash
+tcp   LISTEN    0      4096   *:9100   *:*
+```
+
+Perfect! Everything is working as expected.  
+Now let’s check the metrics collected by Node Exporter:
+
+```bash
+curl http://localhost:9100/metrics
+```
+
+Remember to replace `localhost` with your machine’s IP address if Node Exporter is running on another host.
+
+When you look at the Node Exporter metrics output, you’ll notice it’s huge — more than 2,000 metrics.  
+That’s a lot of data!
+
+&nbsp;
+## Adding Node Exporter to Prometheus
+
+Remember that these metrics are not yet available in Prometheus. For them to be collected, we need to configure Prometheus to scrape Node Exporter metrics. In other words, we must configure Prometheus to perform a `scrape` on Node Exporter. To do this, we need to create a new `job` in the Prometheus configuration file to define our new `target`.
+
+Let’s add the following content to the Prometheus configuration file:
+
+```bash
+- job_name: 'node_exporter'
+  static_configs:
+    - targets: ['localhost:9100']
+```
+
+**Important**: Remember to replace `localhost` with your machine’s IP address if you installed Node Exporter on a different machine.
+
+The configuration file should look like this:
+
+```bash
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          app: "prometheus"
+
+  - job_name: "My First Exporter"
+    static_configs:
+      - targets: ["localhost:8899"]
+        labels:
+          app: "luis-gustavo"
+
+  - job_name: "My Second Exporter"
+    static_configs:
+      - targets: ["localhost:7788"]
+        labels:
+          app: "luis-gustavo"
+
+  - job_name: "Node Exporter"
+    static_configs:
+      - targets: ["localhost:9100"]
+        labels:
+          app: "luis-gustavo"
+```
+
+I won’t even comment on the file here, because you already know how the Prometheus configuration file works, right?
+
+Now let’s restart Prometheus so it can load the new configuration:
+
+```bash
+sudo systemctl restart prometheus
+```
+
+Let’s check if our new `job` was created successfully:
+
+```bash
+curl http://localhost:9090/targets
+```
+
+If you want to see the new target via the Prometheus web interface, just access the URL `http://localhost:9090/targets`. Take a look at the screenshot below:
+
+![Prometheus Targets](targets-2.png)
+
+The new `job` is there, successfully created. Now let’s check if Prometheus is collecting Node Exporter metrics. We’ll pass the `job` name to Prometheus to make the query more specific:
+
+```bash
+curl -GET http://localhost:9090/api/v1/query --data-urlencode "query=node_cpu_seconds_total{job='Node Exporter'}" | jq .
+```
+
+The output is quite large, and the machine I’m testing has 4 CPUs, so I’ll show only a small part of it:
+
+```json
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+	"result": [
+      {
+        "metric": {
+          "__name__": "node_cpu_seconds_total",
+          "app": "luis-gustavo",
+          "cpu": "0",
+          "instance": "localhost:9100",
+          "job": "Node Exporter",
+          "mode": "idle"
+        },
+        "value": [
+          1765927509.818,
+          "1391.84"
+        ]
+      }
+    ]
+  }
+}
+```
+
+Now let’s run the same query using the Prometheus web interface:
+
+![Prometheus Query](cpu-seconds-total-metric.png)
+
+&nbsp;
+## Enabling New Collectors in Node Exporter
+
+One very interesting aspect of Node Exporter is the number of `collectors` it provides. These collectors are responsible for gathering metrics from different system components. For example, if you want to monitor services managed by `systemd`, you can enable the `systemd` collector in Node Exporter.
+
+The first step is to create a new file where we will define all collectors we want to enable in Node Exporter. In our case, we will enable only the `systemd` collector.
+
+Let’s create the directory `/etc/node_exporter/` (if it does not exist) and the file `/etc/node_exporter/node_exporter_options`:
+
+```bash
+sudo mkdir /etc/node_exporter
+sudo vim /etc/node_exporter/node_exporter_options
+```
+
+&nbsp;
+
+Now add the environment variable `OPTIONS` to the file:
+
+```bash
+OPTIONS="--collector.systemd"
+```
+
+Adjust the permissions of the directory and file:
+
+```bash
+sudo chown -R node_exporter:node_exporter /etc/node_exporter/
+```
+
+Now update the Node Exporter systemd service file to load this environment variable. The service file should look like this:
+
+```bash
+[Unit]
+Description=Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+Type=simple
+EnvironmentFile=/etc/node_exporter/node_exporter_options
+ExecStart=/usr/local/bin/node_exporter $OPTIONS
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Reload systemd and restart Node Exporter so it applies the new configuration:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart node_exporter
+```
+
+Now let’s check if Node Exporter is collecting `systemd` metrics:
+
+```bash
+curl -GET http://localhost:9100/metrics | grep systemd
+```
+
+The output is quite large, so here is just a small portion of it:
+
+```bash
+node_scrape_collector_success{collector="systemd"} 1
+node_systemd_socket_accepted_connections_total{name="docker.socket"} 0
+node_systemd_socket_accepted_connections_total{name="snapd.socket"} 0
+```
+
+Done! Task completed — and very easy to do. Now you know how to enable new collectors in Node Exporter and collect additional metrics!
+
+&nbsp;
+## Some Queries Using Node Exporter Metrics
+
+Now that we know how to collect Node Exporter metrics, let’s run some queries.
+
+&nbsp;
+### 1. How many CPUs does my machine have?
+
+```bash
+count(node_cpu_seconds_total{job='node_exporter', mode='idle'})
+```
+
+This query counts how many `node_cpu_seconds_total` metrics exist with `mode="idle"`. The result represents the number of CPUs on the machine.
+
+&nbsp;
+### 2. What is the CPU usage percentage?
+
+```bash
+100 - avg by (cpu) (irate(node_cpu_seconds_total{job='node_exporter', mode='idle'}[5m])) * 100
+```
+
+This query calculates CPU usage by subtracting idle time from 100%, using a 5-minute `irate`.
+
+&nbsp;
+### 3. What is the memory usage percentage?
+
+```bash
+100 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100
+```
+
+This query calculates memory usage by subtracting available memory from total memory.
+
+&nbsp;
+### 4. What is the disk usage percentage?
+
+```bash
+100 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100
+```
+
+This query calculates disk usage for the root filesystem.
+
+&nbsp;
+### 5. How much disk space is used on `/` in gigabytes?
+
+```bash
+(node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_avail_bytes{mountpoint="/"}) / 1024 / 1024 / 1024
+```
+
+This query calculates the used disk space in gigabytes.
+
+Simple, clean, and powerful — now you’re fully equipped to build great Prometheus queries!
