@@ -138,3 +138,36 @@ On your first login, Grafana will ask you to change the default password. Feel f
 ![Grafana - Home](grafana-home-page.png)
 
 Now we are successfully logged in and seeing Grafana’s home screen. For now, there’s not much to see — but we’ll fix that very soon.
+
+&nbsp;
+#### Adding Prometheus as a Data Source
+
+We will explore Grafana in much more detail during Module 4, but just so you don’t get *too* curious, let’s already add Prometheus as a data source in Grafana so we can start creating our dashboards.
+
+The first thing we need to do is access the Data Source configuration page. To do that, click on the left-side menu on `Connections` and then on `Data Sources`:
+
+Now click on the `Add data source` button and select Prometheus:
+
+![Grafana - Add Data Source](grafana-data-source-prometheus-1.png)
+
+&nbsp;
+
+Now let’s fill in the Prometheus configuration.
+
+The first field is the Data Source name — let’s use `Prometheus`.
+
+Next, fill in the Prometheus URL. In our case, it is `http://localhost:9090`.
+
+For now, we won’t configure any extra settings such as authentication, alerting, or advanced options.
+
+Once everything is set, click on the `Save & Test` button to save the configuration and test the connection to Prometheus:
+
+![Grafana - Add Data Source](grafana-data-source-prometheus-2.png)
+
+&nbsp;
+
+![Grafana - Add Data Source](grafana-data-source-prometheus-3.png)
+
+&nbsp;
+Done! Grafana is now successfully configured to connect to Prometheus.  
+Next, let’s create our very first dashboard.
