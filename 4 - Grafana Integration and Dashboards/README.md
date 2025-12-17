@@ -169,5 +169,91 @@ Once everything is set, click on the `Save & Test` button to save the configurat
 ![Grafana - Add Data Source](grafana-data-source-prometheus-3.png)
 
 &nbsp;
+
 Done! Grafana is now successfully configured to connect to Prometheus.  
 Next, let’s create our very first dashboard.
+
+&nbsp;
+#### Creating Our First Dashboard
+
+Alright! The big moment has arrived: let’s create our very first Grafana dashboard.  
+It will be a very simple one for now — after all, it’s our first dashboard.
+
+The first step is to click on the left-side menu on `Dashboard`, and then click on the `New Dashboard` button:
+
+![Grafana - New Dashboard](grafana-dashboards-1.png)
+
+&nbsp;
+
+Now choose the data source. Click on `Prometheus`:
+
+![Grafana - New Dashboard](grafana-dashboards-2.png)
+
+&nbsp;
+To make things easier, let’s split this screen into three areas:
+
+1. The first area is the panel configuration section, where we can configure the panel title, chart type, and other visual settings.
+
+2. The second area is the `Data Source` configuration section, where we choose which data source will feed the panel.
+
+3. The third area is the query configuration section, where we define which metric we want to visualize.
+
+![Grafana - New Dashboard](grafana-dashboards-3.png)
+
+&nbsp;
+#### Grafana Dashboards – CPU & Memory
+
+I created two dashboards in **Grafana** using metrics collected by **Prometheus + node_exporter**.
+
+The goal is to provide clear and practical monitoring of **CPU** and **Memory** usage on Linux servers.
+
+&nbsp;
+#### CPU Dashboard
+
+The CPU dashboard shows:
+- CPU usage in **percentage (%)**
+- Per-core visualization
+- Metrics based on `node_cpu_seconds_total`
+- Usage calculation excluding idle time
+
+This dashboard is useful for:
+- Load analysis
+- Peak detection
+- Real-time troubleshooting
+
+```promql
+100 - (rate(node_cpu_seconds_total{mode="idle"}[30s]) * 100)
+```
+
+![CPU Dashboard](grafana-dashboards-4.png)
+
+&nbsp;
+#### Memory Dashboard
+
+The memory dashboard shows:
+- **Total Memory (GB)**
+- **Used Memory (GB)**
+- Calculations based on:
+  - `MemTotal`
+  - `MemAvailable`
+- Representation aligned with real Linux memory behavior (cache and buffers are considered)
+
+This dashboard helps to:
+- Monitor actual RAM usage
+- Avoid misleading “memory full” scenarios
+- Support alerting and capacity planning
+
+```promql
+node_memory_MemTotal_bytes / 1024 / 1024 / 1024
+```
+
+```promql
+(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / 1024 / 1024 / 1024
+```
+
+![Memory Dashboard](grafana-dashboards-5.png)
+
+Done! Our first dashboard is ready.  
+It’s still quite simple, but it already gives you a good taste of how powerful Grafana is, right?
+
+We’ll come back to Grafana later today to explore it a bit more, but now let’s shift our focus to Alertmanager for a moment.
