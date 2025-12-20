@@ -186,7 +186,242 @@ Below is a screenshot showing the alert in the **firing** state in the Prometheu
 
 ![Prometheus Alert Firing](prometheus-alert-1.png)
 
-&nbsp;
 At this stage, Prometheus is already capable of detecting issues and generating alerts based on metrics.
 
 In the next steps, we will integrate **Alertmanager** to properly route, group, and deliver these alerts to notification channels such as email, Slack, or other integrations.
+
+&nbsp;
+### What Is Alertmanager?
+
+**Alertmanager** is the component in the Prometheus ecosystem responsible for handling alerts after they are fired by Prometheus.
+
+While Prometheus is responsible for **detecting issues** by evaluating alert rules, Alertmanager is responsible for **managing notifications**.
+
+In simple terms:
+
+- Prometheus detects and fires alerts  
+- Alertmanager decides what to do with those alerts  
+
+&nbsp;
+### Why Alertmanager Exists
+
+Prometheus can identify problems, but it does not know:
+
+- Who should receive the alert  
+- How the alert should be delivered  
+- When alerts should be grouped or suppressed  
+
+Alertmanager exists to solve these problems and make alerting usable in real-world environments.
+
+&nbsp;
+### Main Responsibilities of Alertmanager
+
+Alertmanager provides several important features:
+
+- **Alert grouping**  
+  Groups related alerts into a single notification to reduce noise.
+
+- **Deduplication**  
+  Prevents the same alert from being sent multiple times.
+
+- **Routing**  
+  Routes alerts to different receivers based on labels such as severity, team, or environment.
+
+- **Silencing**  
+  Temporarily mutes alerts during maintenance windows.
+
+- **Inhibition**  
+  Suppresses less important alerts when a more critical alert is firing.
+
+&nbsp;
+### Prometheus vs Alertmanager
+
+It is important to understand the separation of responsibilities:
+
+| Component     | Responsibility |
+|--------------|----------------|
+| Prometheus   | Evaluate alert rules and change alert states |
+| Alertmanager | Route, group, suppress, and send notifications |
+
+Prometheus sends alerts to Alertmanager via HTTP, and from that point on, Alertmanager takes control of alert processing.
+
+&nbsp;
+### How Prometheus and Alertmanager Work Together
+
+The alerting flow works as follows:
+
+1. Prometheus evaluates alert rules  
+2. An alert condition becomes true  
+3. The alert changes to the **firing** state  
+4. Prometheus sends the alert to Alertmanager  
+5. Alertmanager processes the alert based on its configuration  
+6. Notifications are delivered to the appropriate receivers  
+
+This separation makes the alerting system flexible and scalable.
+
+&nbsp;
+### Alertmanager Configuration Overview
+
+Alertmanager is configured using a YAML file, usually called `alertmanager.yml`.
+
+This configuration defines:
+
+- Global settings  
+- Receivers (email, Slack, etc.)  
+- Routing rules  
+- Grouping behavior  
+- Silences and inhibitions  
+
+In the next steps, Alertmanager will be installed, configured, and integrated with Prometheus to send real notifications.
+
+&nbsp;
+### Why Alertmanager Is Essential in Production
+
+Without Alertmanager, alerts quickly become noisy and difficult to manage.
+
+Alertmanager ensures that:
+
+- Alerts reach the right people  
+- Notifications are sent at the right time  
+- Alert noise is reduced  
+- On-call engineers are not overwhelmed  
+
+This makes Alertmanager a critical component in any production-grade monitoring stack.
+
+&nbsp;
+### Downloading Alertmanager
+
+In this step, Alertmanager is installed manually using the official binary. This approach helps to better understand how Alertmanager works, where its files are located, and how it is managed as a system service.
+
+```
+https://github.com/prometheus/alertmanager/releases/
+```
+
+First, download the Alertmanager binary from the official Prometheus repository.
+
+```bash
+wget https://github.com/prometheus/alertmanager/releases/download/v0.30.0/alertmanager-0.30.0.linux-amd64.tar.gz`
+```
+
+Extract the archive:
+
+```bash
+tar -xvzf alertmanager-0.30.0.linux-amd64.tar.gz
+cd alertmanager-0.30.0.linux-amd64
+```
+
+Move the Alertmanager binaries to `/usr/local/bin`:
+
+```bash
+sudo mv alertmanager /usr/local/bin/
+sudo mv amtool /usr/local/bin/
+```
+
+Verify that the binaries are accessible:
+
+```bash
+alertmanager --version
+amtool --version
+```
+
+&nbsp;
+### Creating Alertmanager User and Directories
+
+For security best practices, a dedicated user and directories are created for Alertmanager.
+
+Create the user:
+
+```bash
+sudo useradd -r -g alertmanager --no-create-home --shell /bin/false alertmanager
+```
+
+Create the required directories:
+
+```bash
+sudo mkdir -p /etc/alertmanager
+sudo mkdir -p /etc/alertmanager/templates
+sudo mkdir -p /var/lib/alertmanager
+```
+
+Set the correct ownership:
+
+```bash
+sudo chown -R alertmanager:alertmanager /etc/alertmanager
+sudo chown -R alertmanager:alertmanager /var/lib/alertmanager
+```
+
+&nbsp;
+### Creating the Alertmanager Configuration File
+
+Create the main configuration file `alertmanager.yml`:
+
+```bash
+sudo vim /etc/alertmanager/alertmanager.yml
+```
+
+Add a minimal configuration:
+
+```yaml
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: "default-receiver"
+
+receivers:
+  - name: "default-receiver"
+```
+
+This configuration is sufficient to start Alertmanager without any notification integrations.
+
+&nbsp;
+### Creating the Systemd Service
+
+Create the systemd service file `alertmanager.service`:
+
+```bash
+sudo vim /etc/systemd/system/alertmanager.service
+```
+
+Service configuration:
+
+```yaml
+[Unit]
+Description=Alertmanager Service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=alertmanager
+Group=alertmanager
+Type=simple
+ExecStart=/usr/local/bin/alertmanager --config.file=/etc/alertmanager/alertmanager.yml --storage.path=/var/lib/alertmanager
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Reload systemd and start the service:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl start alertmanager
+sudo systemctl enable alertmanager
+```
+
+&nbsp;
+### Verifying Alertmanager Status
+
+Check the service status:
+
+```bash
+sudo systemctl status alertmanager
+```
+
+If the service is running correctly, Alertmanager should be active.
+
+Access the Alertmanager web interface:
+
+```bash
+http://localhost:9093
+```
