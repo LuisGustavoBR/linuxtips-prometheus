@@ -300,7 +300,7 @@ https://github.com/prometheus/alertmanager/releases/
 First, download the Alertmanager binary from the official Prometheus repository.
 
 ```bash
-wget https://github.com/prometheus/alertmanager/releases/download/v0.30.0/alertmanager-0.30.0.linux-amd64.tar.gz`
+wget https://github.com/prometheus/alertmanager/releases/download/v0.30.0/alertmanager-0.30.0.linux-amd64.tar.gz
 ```
 
 Extract the archive:
