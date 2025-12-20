@@ -174,3 +174,19 @@ If CPU usage goes above the threshold for more than 2 minutes, it will become **
 At this point, Prometheus is already capable of detecting problems and generating alerts.
 
 In the next step, we’ll integrate Prometheus with **Alertmanager** to route, group, and send these alerts to real notification channels.
+
+&nbsp;
+### Alert in Firing State
+
+After increasing the CPU usage on the node, the alert condition was met and the alert transitioned from **inactive** to **firing**.
+
+This confirms that the alert rule is working as expected and that Prometheus is correctly evaluating the expression and triggering the alert when the defined threshold is exceeded.
+
+Below is a screenshot showing the alert in the **firing** state in the Prometheus web interface:
+
+![Prometheus Alert Firing](prometheus-alert-1.png)
+
+&nbsp;
+At this stage, Prometheus is already capable of detecting issues and generating alerts based on metrics.
+
+In the next steps, we will integrate **Alertmanager** to properly route, group, and deliver these alerts to notification channels such as email, Slack, or other integrations.
