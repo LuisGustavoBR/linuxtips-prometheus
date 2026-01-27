@@ -434,3 +434,199 @@ Access the Alertmanager web interface:
 ```bash
 http://localhost:9093
 ```
+
+&nbsp;
+### Sending Alerts to Slack
+
+Slack is one of the most commonly used tools for alert notifications.  
+Alertmanager has native support for Slack through **Incoming Webhooks**, which makes the integration very simple.
+
+Let's configure it step by step.
+
+&nbsp;
+### Configuring Slack Incoming Webhooks
+
+The first step is to create an **Incoming Webhook** in Slack.
+
+1. Access your Slack workspace.
+2. Go to **Admin → Apps & workflows**.
+&nbsp;
+![Slack App Configuration - Step 1](slack-config-app-01.png)
+
+3. Search for **Incoming WebHooks**.
+4. Click **Add to Slack**.
+&nbsp;
+![Slack App Configuration - Step 2](slack-config-app-02.png)
+
+5. Choose the channel where the alerts will be sent (for example `#alerts`).
+6. Slack will generate a **Webhook URL**.
+
+This URL will look like this:
+
+```bash
+https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+**Important**:  
+This URL is sensitive information. Never commit it to a public repository.  
+In our configuration, we will reference it as `SLACK_API_URL`.
+
+&nbsp;
+### Configuring Alertmanager to Send Alerts to Slack
+
+Now let's configure Alertmanager to use the Slack webhook.
+
+Edit the Alertmanager configuration file:
+
+```yaml
+sudo vim /etc/alertmanager/alertmanager.yml
+```
+
+Below is an example of a complete configuration using Slack as the receiver:
+
+```yaml
+global:
+  slack_api_url: 'SLACK_API_URL'
+route:
+  group_by: ['alertname']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 1h
+  receiver: 'slack'
+receivers:
+- name: 'slack'
+  slack_configs:
+  - channel: '#alerts'
+    send_resolved: true
+    icon_url: https://eadn-wc05-13372774.nxedge.io/wp-content/uploads/2025/08/Pinguim-equipe.png
+    title: >
+      [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ len .Alerts.Firing }}{{ end }}]
+      {{ .CommonLabels.alertname }} on instance {{ .CommonLabels.instance }}
+    text: >
+      {{ range .Alerts }}
+      *Alert:* {{ .Annotations.summary }}{{ if .Labels.severity }} - `{{ .Labels.severity }}`{{ end }}
+
+      *Description:* {{ .Annotations.description }}
+
+      *Details:*
+      {{ range .Labels.SortedPairs }}
+
+      • *{{ .Name }}:* `{{ .Value }}`
+      {{ end }}
+      {{ end }}
+inhibit_rules:
+- source_matchers:
+  - severity="critical"
+  target_matchers:
+  - severity="warning"
+  equal: ["alertname", "instance"]
+```
+
+&nbsp;
+### Configuration Explanation
+
+#### `global.slack_api_url`
+Defines the Slack Incoming Webhook URL used by Alertmanager to send notifications to Slack.
+
+&nbsp;
+#### `route`
+Controls how alerts are grouped and routed.
+
+- `group_by`: Groups alerts by `alertname`
+- `group_wait`: How long Alertmanager waits before sending the first alert notification
+- `group_interval`: Minimum interval between alert group notifications
+- `repeat_interval`: How often an alert is resent while it remains firing
+
+&nbsp;
+#### `receivers`
+Defines where alerts are sent. In this case, alerts are sent to Slack.
+
+&nbsp;
+#### `send_resolved: true`
+Sends a notification when the alert is resolved.
+
+&nbsp;
+#### `inhibit_rules`
+Prevents lower severity alerts (for example `warning`) from being sent when a higher severity alert (`critical`) with the same `alertname` and `instance` is already firing.
+
+&nbsp;
+### Validating the Alertmanager Configuration
+
+Before restarting Alertmanager, it is a good practice to validate the configuration file.
+
+Use the following command:
+
+```bash
+amtool check-config /etc/alertmanager/alertmanager.yml
+```
+
+If everything is correct, you should see a success message.
+
+&nbsp;
+### Restarting Alertmanager
+
+After validating the configuration, restart Alertmanager so it loads the new settings:
+
+```bash
+sudo systemctl restart alertmanager
+```
+
+&nbsp;
+### Connecting Prometheus to Alertmanager
+
+Now Prometheus needs to know where Alertmanager is running.
+
+Edit the Prometheus configuration file:
+
+```bash
+sudo vim /etc/prometheus/prometheus.yml
+```
+
+Add the following section:
+
+```yaml
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      - localhost:9093
+```
+
+&nbsp;
+After saving the file, restart Prometheus:
+
+```bash
+sudo systemctl restart prometheus
+```
+
+&nbsp;
+### Alert Flow Overview
+
+At this point, the alerting flow works as follows:
+
+1. **Prometheus** evaluates alert rules.
+2. When a rule is triggered, Prometheus sends the alert to **Alertmanager**.
+3. **Alertmanager** processes, groups, and routes the alert.
+4. The alert is delivered to **Slack**.
+
+&nbsp;
+### Alert Received in Slack
+
+Once the alert enters the **firing** state, you should receive a message in the configured Slack channel, containing:
+
+- Alert name
+- Severity
+- Description
+- Labels and details
+- Notification when the alert is resolved (if `send_resolved` is enabled)
+
+&nbsp;
+The image below shows two important alert states:
+
+- **FIRING**: indicates that the alert condition is currently active.
+- **RESOLVED**: indicates that the alert condition has been cleared and the system has returned to a normal state.
+
+This behavior is possible because the `send_resolved: true` option is enabled in the Alertmanager configuration.
+
+![Alertmanager Slack Notifications](slack-alert-messages.png)
