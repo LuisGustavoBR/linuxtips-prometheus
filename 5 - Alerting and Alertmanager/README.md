@@ -630,3 +630,126 @@ The image below shows two important alert states:
 This behavior is possible because the `send_resolved: true` option is enabled in the Alertmanager configuration.
 
 ![Alertmanager Slack Notifications](slack-alert-messages.png)
+
+&nbsp;
+### Configuring Alertmanager to Send Alerts to Email
+
+Besides Slack notifications, Alertmanager also supports sending alerts via email using an SMTP server. This is useful when you want to notify on-call engineers, distribution lists, or external systems that rely on email notifications.
+
+In this example, we will configure Alertmanager to send emails using a generic SMTP server.
+
+&nbsp;
+### Email Configuration
+
+Alertmanager email notifications are configured inside the `email_configs` section of the receiver.
+
+Below is an example configuration using an SMTP server with SSL enabled:
+
+```yaml
+- name: 'email'
+  email_configs:
+  - to: 'team@example.com'
+    from: 'Alertmanager <alerts@example.com>'
+    smarthost: 'smtp.example.com:465'
+    auth_username: 'smtp_user'
+    auth_password: 'smtp_password'
+    require_tls: false
+    send_resolved: true
+    tls_config:
+      insecure_skip_verify: false
+```
+
+For this email alert test to work correctly, make sure the default receiver is set to **email** in the Alertmanager route configuration.
+
+Update the `route` section as shown below:
+
+```yaml
+receiver: 'email'
+```
+
+This ensures that, during this test, all alerts are sent to the email receiver instead of Slack.
+
+&nbsp;
+### Configuration Explanation
+
+**to**  
+Destination email address (or distribution list) that will receive the alerts.
+
+**from**  
+Sender name and email address.  
+This allows alerts to appear as:  
+**Alertmanager <alerts@example.com>**
+
+**smarthost**  
+SMTP server address and port.  
+Port **465** is commonly used for SMTP over SSL.
+
+**auth_username / auth_password**  
+SMTP authentication credentials.
+
+**require_tls**  
+Set to **false** when using SSL (port 465).  
+For STARTTLS (usually port 587), this should be set to **true**.
+
+**send_resolved**  
+If set to **true**, Alertmanager sends a notification when the alert is resolved.
+
+**tls_config.insecure_skip_verify**  
+Controls TLS certificate validation.
+- **false** → validates the SMTP server certificate (recommended)
+- **true** → skips certificate validation (not recommended for production)
+
+&nbsp;
+### Validating the Alertmanager Configuration
+
+Before restarting Alertmanager, always validate the configuration file:
+
+```bash
+amtool check-config /etc/alertmanager/alertmanager.yml
+```
+
+If the configuration is valid, you should see a success message.
+
+&nbsp;
+### Restarting Alertmanager
+
+After validating the configuration, restart Alertmanager to apply the changes:
+
+```bash
+sudo systemctl restart alertmanager
+```
+
+&nbsp;
+## Testing Email Alerts with CPU Stress
+
+To validate the email alert configuration, a CPU stress test was executed on the machine to intentionally trigger the alert and verify both the **firing** and **resolved** notifications.
+
+&nbsp;
+### Generating CPU Load
+
+The following command was used to generate high CPU usage:
+
+```bash
+stress-ng --cpu 3 --cpu-load 100 --timeout 3m
+```
+
+This command:
+- Uses **3 CPU workers**
+- Forces **100% CPU usage**
+- Runs for **3 minutes**
+
+As expected, the CPU usage crossed the alert threshold, causing the alert to enter the **firing** state.
+
+&nbsp;
+### Alert: Firing
+
+When the threshold was exceeded, Alertmanager sent an email notification indicating that the alert was **firing**.
+
+![Alert Email - Firing](email-alert-firing.png)
+
+&nbsp;
+### Alert: Resolved
+
+After the stress test finished and CPU usage returned to normal levels, Alertmanager automatically sent a second email indicating that the alert was **resolved**.
+
+![Alert Email - Resolved](email-alert-resolved.png)
