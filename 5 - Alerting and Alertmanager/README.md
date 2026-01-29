@@ -494,32 +494,32 @@ route:
   repeat_interval: 1h
   receiver: 'slack'
 receivers:
-- name: 'slack'
-  slack_configs:
-  - channel: '#alerts'
-    send_resolved: true
-    icon_url: https://eadn-wc05-13372774.nxedge.io/wp-content/uploads/2025/08/Pinguim-equipe.png
-    title: >
-      [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ len .Alerts.Firing }}{{ end }}]
-      {{ .CommonLabels.alertname }} on instance {{ .CommonLabels.instance }}
-    text: >
-      {{ range .Alerts }}
-      *Alert:* {{ .Annotations.summary }}{{ if .Labels.severity }} - `{{ .Labels.severity }}`{{ end }}
-
-      *Description:* {{ .Annotations.description }}
-
-      *Details:*
-      {{ range .Labels.SortedPairs }}
-
-      • *{{ .Name }}:* `{{ .Value }}`
-      {{ end }}
-      {{ end }}
+  - name: 'slack'
+    slack_configs:
+    - channel: '#alerts'
+      send_resolved: true
+      icon_url: https://eadn-wc05-13372774.nxedge.io/wp-content/uploads/2025/08/Pinguim-equipe.png
+      title: >
+        [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ len .Alerts.Firing }}{{ end }}]
+        {{ .CommonLabels.alertname }} on instance {{ .CommonLabels.instance }}
+      text: >
+        {{ range .Alerts }}
+        *Alert:* {{ .Annotations.summary }}{{ if .Labels.severity }} - `{{ .Labels.severity }}`{{ end }}
+  
+        *Description:* {{ .Annotations.description }}
+  
+        *Details:*
+        {{ range .Labels.SortedPairs }}
+  
+        • *{{ .Name }}:* `{{ .Value }}`
+        {{ end }}
+        {{ end }}
 inhibit_rules:
-- source_matchers:
-  - severity="critical"
-  target_matchers:
-  - severity="warning"
-  equal: ["alertname", "instance"]
+  - source_matchers:
+    - severity="critical"
+    target_matchers:
+    - severity="warning"
+    equal: ["alertname", "instance"]
 ```
 
 &nbsp;
@@ -648,15 +648,15 @@ Below is an example configuration using an SMTP server with SSL enabled:
 ```yaml
 - name: 'email'
   email_configs:
-  - to: 'team@example.com'
-    from: 'Alertmanager <alerts@example.com>'
-    smarthost: 'smtp.example.com:465'
-    auth_username: 'smtp_user'
-    auth_password: 'smtp_password'
-    require_tls: false
-    send_resolved: true
-    tls_config:
-      insecure_skip_verify: false
+    - to: 'team@example.com'
+      from: 'Alertmanager <alerts@example.com>'
+      smarthost: 'smtp.example.com:465'
+      auth_username: 'smtp_user'
+      auth_password: 'smtp_password'
+      require_tls: false
+      send_resolved: true
+      tls_config:
+        insecure_skip_verify: false
 ```
 
 For this email alert test to work correctly, make sure the default receiver is set to **email** in the Alertmanager route configuration.
@@ -753,3 +753,142 @@ When the threshold was exceeded, Alertmanager sent an email notification indicat
 After the stress test finished and CPU usage returned to normal levels, Alertmanager automatically sent a second email indicating that the alert was **resolved**.
 
 ![Alert Email - Resolved](email-alert-resolved.png)
+
+&nbsp;
+### Routes and Time Intervals
+
+In this part of the module, we were studying how **routes** and **time intervals** work in Alertmanager and how they can be combined to control **when** and **where** alerts are delivered.
+
+Routes define **how alerts are matched and sent to receivers**, while time intervals allow us to **restrict alert notifications to specific days and hours**, such as business days and working hours.
+
+&nbsp;
+### Defining Time Intervals
+
+We created two time intervals:
+
+- **workdays**: represents business days (Monday to Friday)
+- **workhours**: represents business hours (09:00 to 18:00)
+
+Configuration example:
+
+```yaml
+time_intervals:
+  - name: workdays
+    time_intervals:
+      - weekdays: ['monday:friday']
+
+  - name: workhours
+    time_intervals:
+      - times:
+        - start_time: 09:00
+          end_time: 18:00
+```
+
+These intervals allow Alertmanager to understand **on which days** and **at which times** alerts are allowed to be sent.
+
+&nbsp;
+### Using Time Intervals in Routes
+
+After defining the time intervals, we applied them to a specific route.  
+This route sends alerts to **Slack** only when the conditions below are met:
+
+- The alert name is `HighCPUUsage`
+- The alert is triggered during **workdays**
+- The alert is triggered during **workhours**
+
+Route configuration:
+
+```yaml
+routes:
+- receiver: 'slack'
+  group_wait: 10s
+  matchers:
+    - alertname = HighCPUUsage
+  group_by: ['alertname', 'instance']
+  active_time_intervals:
+    - workdays
+    - workhours
+```
+
+&nbsp;
+### Why This Is Important
+
+By combining **routes** and **time intervals**, we gain fine-grained control over alert delivery.  
+This approach helps to:
+
+- Avoid alerts outside business hours
+- Reduce alert fatigue
+- Send notifications only when someone is available to respond
+
+This is a powerful feature of Alertmanager and a key concept when designing real-world alerting strategies.
+
+---
+
+Final `/etc/alertmanager/alertmanager.yml` file:
+
+```yaml
+global:
+  slack_api_url: 'SLACK_API_URL'
+time_intervals:
+  - name: workdays
+    time_intervals:
+      - weekdays: ['monday:friday']
+  - name: workhours
+    time_intervals:
+      - times:
+        - start_time: 09:00
+          end_time: 18:00
+route:
+  group_by: ['alertname']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 1h
+  receiver: 'email'
+  routes:
+  - receiver: 'slack'
+    group_wait: 10s
+    matchers:
+      - alertname = HighCPUUsage
+    group_by: ['alertname', 'instance']
+    active_time_intervals:
+      - workdays
+      - workhours
+receivers:
+  - name: 'slack'
+    slack_configs:
+    - channel: '#alerts'
+      send_resolved: true
+      icon_url: https://eadn-wc05-13372774.nxedge.io/wp-content/uploads/2025/08/Pinguim-equipe.png
+      title: >
+        [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ len .Alerts.Firing }}{{ end }}]
+        {{ .CommonLabels.alertname }} on instance {{ .CommonLabels.instance }}
+      text: >
+        {{ range .Alerts }}
+        *Alert:* {{ .Annotations.summary }}{{ if .Labels.severity }} - `{{ .Labels.severity }}`{{ end }}
+
+        *Description:* {{ .Annotations.description }}
+
+        *Details:*
+        {{ range .Labels.SortedPairs }}
+
+        • *{{ .Name }}:* `{{ .Value }}`
+        {{ end }}
+        {{ end }}
+  - name: 'email'
+    email_configs:
+      - to: 'team@example.com'
+        from: 'Alertmanager <alerts@example.com>'
+        smarthost: 'smtp.example.com:465'
+        auth_username: 'smtp_user'
+        auth_password: 'smtp_password'
+        require_tls: false
+        send_resolved: true
+        tls_config:
+          insecure_skip_verify: false
+inhibit_rules:
+  - source_matchers:
+    - severity="critical"
+    target_matchers:
+    - severity="warning"
+    equal: ["alertname", "instance"]
+```
