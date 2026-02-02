@@ -163,3 +163,142 @@ If needed, the password can be retrieved from Kubernetes secrets:
 ```bash
 kubectl get secret grafana-admin -n monitoring -o jsonpath="{.data.admin-password}" | base64 -d
 ```
+&nbsp;
+### Exposing Prometheus and Alertmanager via Ingress
+
+In this step of the training, we extended the kube-prometheus setup by exposing Prometheus and Alertmanager using Kubernetes Ingress.  
+The goal is to access these components in a clean and production-like way, without relying on port-forwarding.
+
+This cluster is running on Talos Linux, using ingress-nginx as the Ingress Controller.
+
+&nbsp;
+### Why use Ingress instead of port-forward?
+
+Using `kubectl port-forward` is useful for quick tests, but it has limitations:
+
+- Requires an active kubectl session
+- Not suitable for long-term access
+- Not aligned with production setups
+
+Ingress provides:
+
+- Centralized HTTP access
+- Host-based routing
+- Better alignment with real-world Kubernetes environments
+
+&nbsp;
+### Services created by kube-prometheus
+
+After installing kube-prometheus, the following Services were created in the `monitoring` namespace:
+
+- Grafana → `grafana` (port 3000)
+- Prometheus → `prometheus-k8s` (port 9090)
+- Alertmanager → `alertmanager-main` (port 9093)
+
+These Services are of type `ClusterIP`, which means they are only accessible inside the cluster and must be exposed using Ingress.
+
+&nbsp;
+### Ingress configuration
+
+We created a single Ingress resource to expose Grafana, Prometheus, and Alertmanager using different hostnames.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana
+  namespace: monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: grafana.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 3000
+    - host: prometheus.local
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: prometheus-k8s
+              port:
+                number: 9090
+    - host: alertmanager.local
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: alertmanager-main
+              port:
+                number: 9093
+```
+
+&nbsp;
+### Local DNS configuration
+
+Since this is a local cluster, the hostnames were mapped manually in the `/etc/hosts` file on the local machine:
+
+```txt
+NODE_IP grafana.local
+NODE_IP prometheus.local
+NODE_IP alertmanager.local
+```
+
+The ingress-nginx controller is exposed using a NodePort, so access is done through the NodePort assigned to port 80.
+
+&nbsp;
+### Access URLs
+
+With the configuration in place, the components are accessible at:
+
+- Grafana  
+  `http://grafana.local:NODEPORT`
+
+- Prometheus  
+  `http://prometheus.local:NODEPORT`
+
+- Alertmanager  
+  `http://alertmanager.local:NODEPORT`
+
+&nbsp;
+### Validation
+
+To validate the setup, the following commands were used:
+
+```bash
+kubectl get ingress -n monitoring
+kubectl describe ingress monitoring -n monitoring
+kubectl get svc -n ingress-nginx
+```
+
+Additionally, logs from the ingress controller can be checked if needed:
+
+```bash
+kubectl logs -n ingress-nginx deploy/ingress-nginx-controller
+```
+
+&nbsp;
+### Screenshots
+
+Add screenshots below to document the setup:
+
+- Grafana dashboard  
+  ![Grafana](grafana-k8s.png)
+
+- Prometheus UI  
+  ![Prometheus](prometheus-k8s.png)
+
+- Alertmanager UI  
+  ![Alertmanager](alertmanager-k8s.png)
