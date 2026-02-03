@@ -50,11 +50,11 @@ The repository is organized into modules, each focused on a specific Prometheus 
 - kube-prometheus stack overview
 - Best practices for observability in clusters
 
-### Module 7: Advanced Topics and Scaling
-- High availability and federation
-- Remote storage integrations
-- Relabeling and metric optimization
-- Performance tuning and troubleshooting
+### Module 7: Prometheus Operator
+- Understanding the Prometheus Operator and CRDs
+- ServiceMonitor vs PodMonitor
+- Dynamic target discovery using labels
+- Creating custom PrometheusRule alerts
 
 ## Usage
 
