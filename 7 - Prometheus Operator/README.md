@@ -282,10 +282,100 @@ kubectl get services
 ```
 
 &nbsp;
-### Validation
+### Verifying Nginx and Exposed Metrics
 
-At this point, all required resources have been created successfully.
+First, let’s verify that our Nginx service is running by executing the following command:
 
-The Nginx Deployment is running, the Service is exposing the metrics endpoint, and the Nginx Exporter is ready to be scraped by Prometheus.
+```bash
+curl http://<SERVICE-EXTERNAL-IP>:80
+```
 
-The next step is to verify that Nginx is running correctly and that metrics are being exposed and collected by Prometheus.
+If everything is working correctly, you should receive a response from Nginx.
+
+&nbsp;
+### Verifying Nginx Metrics Endpoint
+
+Now, let’s check if the Nginx metrics are being exposed correctly:
+
+```bash
+curl http://<SERVICE-EXTERNAL-IP>:80/nginx_status
+```
+
+This endpoint should return basic Nginx statistics such as active connections, requests, and handled connections.
+
+&nbsp;
+### Verifying Nginx Exporter Metrics
+
+Next, let’s verify whether the Nginx Exporter is exposing metrics in Prometheus format:
+
+```bash
+curl http://<SERVICE-EXTERNAL-IP>:80/metrics
+```
+
+If successful, you should see metrics formatted for Prometheus scraping.
+
+At this point, you already know how to create a Kubernetes Service and expose metrics from both Nginx and the Nginx Exporter.
+
+&nbsp;
+### Creating a ServiceMonitor
+
+Now, let’s create a **ServiceMonitor** so that Prometheus can automatically discover and scrape metrics from our Nginx Service.
+
+Create the following YAML file:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nginx-servicemonitor
+  labels:
+    app: nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  endpoints:
+    - interval: 10s
+      path: /metrics
+      targetPort: 9113
+```
+
+&nbsp;
+### Understanding the ServiceMonitor Configuration
+
+Let’s break down what each part of this YAML file does:
+
+* **`apiVersion`**: Kubernetes API version used for the ServiceMonitor resource.
+* **`kind`**: The type of resource being created (`ServiceMonitor`).
+* **`metadata`**: Metadata about the resource.
+* **`metadata.name`**: Name of the ServiceMonitor.
+* **`metadata.labels`**: Labels used to identify and organize the resource.
+* **`spec`**: Specification of the ServiceMonitor.
+* **`spec.selector`**: Selector used to identify which Service will be monitored.
+* **`spec.selector.matchLabels`**: Matches Services labeled with `app: nginx`.
+* **`spec.endpoints`**: List of endpoints that Prometheus will scrape.
+* **`spec.endpoints.interval`**: How often Prometheus scrapes metrics (every 10 seconds).
+* **`spec.endpoints.path`**: HTTP path used to scrape metrics (`/metrics`).
+* **`spec.endpoints.targetPort`**: Port where the exporter exposes metrics (`9113`).
+
+&nbsp;
+### Applying the ServiceMonitor
+
+Create the ServiceMonitor by running:
+
+```bash
+kubectl apply -f nginx-service-monitor.yaml
+```
+
+Then, verify that the ServiceMonitor was successfully created:
+
+```bash
+kubectl get servicemonitors
+```
+
+&nbsp;
+### Verifying Metrics in Prometheus
+
+Now that Nginx is running, metrics are exposed, and the ServiceMonitor is configured, the final step is to verify that Prometheus is successfully scraping metrics from both **Nginx** and the **Nginx Exporter**.
+
+You can do this by accessing the Prometheus UI and checking the **Targets** page or querying metrics directly using PromQL.
