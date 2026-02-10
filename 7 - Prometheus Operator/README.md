@@ -87,9 +87,6 @@ data:
     }
 ```
 
-
----
-
 &nbsp;
 ###  Understanding the YAML File
 
@@ -379,3 +376,395 @@ kubectl get servicemonitors
 Now that Nginx is running, metrics are exposed, and the ServiceMonitor is configured, the final step is to verify that Prometheus is successfully scraping metrics from both **Nginx** and the **Nginx Exporter**.
 
 You can do this by accessing the Prometheus UI and checking the **Targets** page or querying metrics directly using PromQL.
+
+&nbsp;
+### Accessing Prometheus Locally
+
+Let’s create a port-forward to access Prometheus locally:
+
+```bash
+kubectl port-forward -n monitoring svc/prometheus-k8s 39090:9090
+```
+
+Now, let’s use `curl` to verify if Prometheus is scraping metrics from Nginx and the Nginx Exporter:
+
+```bash
+curl http://localhost:39090/api/v1/targets
+```
+
+Done! Now you know how to create a Service in Kubernetes, expose metrics from Nginx and the Nginx Exporter, and create a ServiceMonitor so your Service is monitored by Prometheus.
+
+It’s very important to understand that Prometheus does not scrape metrics automatically. A ServiceMonitor is required for Prometheus to collect metrics.
+
+&nbsp;
+### PodMonitors
+
+What if our workload is not a Service? What if our workload is a Pod? How can we monitor a Pod?
+
+There are scenarios where we don’t have a Service in front of our Pods, such as when using CronJobs, Jobs, DaemonSets, and similar resources. I’ve also seen cases where teams use PodMonitors to monitor non-HTTP Pods, for example Pods that expose metrics from RabbitMQ, Redis, Kafka, and others.
+
+&nbsp;
+### Creating a PodMonitor
+
+To create a PodMonitor, there are very few changes compared to what we learned when creating a ServiceMonitor. Let’s create our PodMonitor using the following YAML file called ``nginx-pod-monitor.yaml``:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: nginx-podmonitor
+  labels:
+    app: nginx-pod
+spec:
+  namespaceSelector:
+    matchNames:
+      - default
+  selector:
+    matchLabels:
+      app: nginx-pod
+  podMetricsEndpoints:
+    - interval: 10s
+      path: /metrics
+      targetPort: 9113
+```
+
+As you can see, we are using almost the same options as the ServiceMonitor. The main difference is the use of ``podMetricsEndpoints`` to define which endpoints will be monitored.
+
+Another new concept here is the ``namespaceSelector``, which is used to select the namespaces that will be monitored. In this case, we are monitoring the ``default`` namespace, where our Nginx Pod will be running.
+
+Before deploying the PodMonitor, let’s create our Nginx Pod using the following YAML file called ``nginx-pod.yaml``:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+  labels:
+    app: nginx-pod
+spec:
+  containers:
+    - name: nginx-container
+      image: nginx
+      ports:
+        - containerPort: 80
+          name: http
+      volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: nginx.conf
+    - name: nginx-exporter
+      image: nginx/nginx-prometheus-exporter:0.11.0
+      args:
+        - -nginx.scrape-uri=http://localhost/metrics
+      resources:
+        limits:
+          memory: 128Mi
+          cpu: 0.3
+      ports:
+        - containerPort: 9113
+          name: metrics
+  volumes:
+    - configMap:
+        defaultMode: 420
+        name: nginx-config
+      name: nginx-config
+```
+
+Once the Pod is created, let’s apply the PodMonitor using the YAML file we created earlier:
+
+```bash
+kubectl apply -f nginx-pod-monitor.yaml
+```
+
+Now, let’s list the PodMonitors created in the cluster:
+
+```bash
+kubectl get podmonitors
+```
+
+If you want to see more details about a PodMonitor, run:
+
+```bash
+kubectl describe podmonitors nginx-podmonitor
+```
+
+You can do the same for a ServiceMonitor:
+
+```bash
+kubectl describe servicemonitors nginx-servicemonitor
+```
+
+Below is an example of the output from describing our PodMonitor:
+
+```bash
+Name:         nginx-podmonitor
+Namespace:    default
+Labels:       app=nginx-pod
+Annotations:  <none>
+API Version:  monitoring.coreos.com/v1
+Kind:         PodMonitor
+Metadata:
+  Creation Timestamp:  2026-02-10T14:39:35Z
+  Generation:          1
+  Resource Version:    75731
+  UID:                 057f2548-e39c-46a5-abaa-d4fbb0b836a9
+Spec:
+  Namespace Selector:
+    Match Names:
+      default
+  Pod Metrics Endpoints:
+    Interval:     10s
+    Path:         /metrics
+    Target Port:  9113
+  Selector:
+    Match Labels:
+      App:  nginx-pod
+Events:     <none>
+```
+
+As we can see, the PodMonitor was created successfully.
+
+Now let’s check if it appears as a target in Prometheus. To do that, access Prometheus locally using ``kubectl port-forward``:
+
+```bash
+kubectl port-forward -n monitoring svc/prometheus-k8s 39090:9090
+```
+
+Now go ahead and check your brand-new target and the metrics being collected.
+
+It’s also worth remembering that you can access the container using ``kubectl exec`` to verify whether the exporter is working correctly or to inspect which metrics are being exposed to Prometheus:
+
+```bash
+kubectl exec -it nginx-pod -c nginx-exporter -- bash
+```
+
+Now let’s use ``curl`` to verify that the exporter is working properly:
+
+```bash
+curl localhost:9113/metrics
+```
+
+If everything is working as expected, you should see an output similar to the following:
+
+```bash
+# HELP nginx_connections_accepted Accepted client connections
+# TYPE nginx_connections_accepted counter
+nginx_connections_accepted 1
+# HELP nginx_connections_active Active client connections
+# TYPE nginx_connections_active gauge
+nginx_connections_active 1
+# HELP nginx_connections_handled Handled client connections
+# TYPE nginx_connections_handled counter
+nginx_connections_handled 1
+# HELP nginx_connections_reading Connections where NGINX is reading the request header
+# TYPE nginx_connections_reading gauge
+nginx_connections_reading 0
+# HELP nginx_connections_waiting Idle client connections
+# TYPE nginx_connections_waiting gauge
+nginx_connections_waiting 0
+# HELP nginx_connections_writing Connections where NGINX is writing the response back to the client
+# TYPE nginx_connections_writing gauge
+nginx_connections_writing 1
+# HELP nginx_http_requests_total Total http requests
+# TYPE nginx_http_requests_total counter
+nginx_http_requests_total 39
+# HELP nginx_up Status of the last metric scrape
+# TYPE nginx_up gauge
+nginx_up 1
+# HELP nginxexporter_build_info Exporter build information
+# TYPE nginxexporter_build_info gauge
+```
+
+Remember that all these metrics can be queried directly in Prometheus.
+
+Let’s switch topics a bit — time to talk about alerts!
+
+&nbsp;
+### Creating our first alert
+
+Now that we already have Kube-Prometheus installed, let’s configure Prometheus to monitor our EKS cluster. To do that, we’ll use ``kubectl port-forward`` to access Prometheus locally. Just run the following command:
+
+```bash
+kubectl port-forward -n monitoring svc/prometheus-k8s 39090:9090
+```
+
+If you want to access Alertmanager, run:
+
+```bash
+kubectl port-forward -n monitoring svc/alertmanager-main 39093:9093
+```
+
+Done! Now you know how to access Prometheus, Alertmanager, and Grafana locally.
+
+Remember that you can access Prometheus and Alertmanager through your browser using the following URLs:
+
+* Prometheus: ``http://localhost:39090``
+* Alertmanager: ``http://localhost:39093``
+
+Simple as that!
+
+Of course, you can expose these services to the internet or to a private VPC, but that’s a topic to discuss with your team.
+
+Before defining a new alert, we need to understand how alerts work now, since we no longer have a standalone alert file like we used when installing Prometheus on a Linux server.
+
+At this point, it’s important to understand that a large part of Prometheus’ configuration lives inside ConfigMaps. ConfigMaps are Kubernetes resources used to store configuration data as key-value pairs and are widely used to manage application configurations.
+
+To list the ConfigMaps in the monitoring namespace, run:
+
+```bash
+kubectl get configmaps -n monitoring
+```
+
+The output should look similar to this:
+
+```bash
+NAME                                                  DATA   AGE
+adapter-config                                        1      9d
+blackbox-exporter-configuration                       1      9d
+grafana-dashboard-alertmanager-overview               1      9d
+grafana-dashboard-apiserver                           1      9d
+grafana-dashboard-cluster-total                       1      9d
+grafana-dashboard-controller-manager                  1      9d
+grafana-dashboard-grafana-overview                    1      9d
+grafana-dashboard-k8s-resources-cluster               1      9d
+grafana-dashboard-k8s-resources-multicluster          1      9d
+grafana-dashboard-k8s-resources-namespace             1      9d
+grafana-dashboard-k8s-resources-node                  1      9d
+grafana-dashboard-k8s-resources-pod                   1      9d
+grafana-dashboard-k8s-resources-windows-cluster       1      9d
+grafana-dashboard-k8s-resources-windows-namespace     1      9d
+grafana-dashboard-k8s-resources-windows-pod           1      9d
+grafana-dashboard-k8s-resources-workload              1      9d
+grafana-dashboard-k8s-resources-workloads-namespace   1      9d
+grafana-dashboard-k8s-windows-cluster-rsrc-use        1      9d
+grafana-dashboard-k8s-windows-node-rsrc-use           1      9d
+grafana-dashboard-kubelet                             1      9d
+grafana-dashboard-namespace-by-pod                    1      9d
+grafana-dashboard-namespace-by-workload               1      9d
+grafana-dashboard-node-cluster-rsrc-use               1      9d
+grafana-dashboard-node-rsrc-use                       1      9d
+grafana-dashboard-nodes                               1      9d
+grafana-dashboard-nodes-aix                           1      9d
+grafana-dashboard-nodes-darwin                        1      9d
+grafana-dashboard-persistentvolumesusage              1      9d
+grafana-dashboard-pod-total                           1      9d
+grafana-dashboard-prometheus                          1      9d
+grafana-dashboard-prometheus-remote-write             1      9d
+grafana-dashboard-proxy                               1      9d
+grafana-dashboard-scheduler                           1      9d
+grafana-dashboard-workload-total                      1      9d
+grafana-dashboards                                    1      9d
+kube-root-ca.crt                                      1      9d
+prometheus-k8s-rulefiles-0                            8      9d
+```
+
+As you can see, there are several ConfigMaps containing configurations for Prometheus, Alertmanager, and Grafana. We’ll focus on the ``prometheus-k8s-rulefiles-0`` ConfigMap, which stores Prometheus alert rules.
+
+To inspect its contents, run:
+
+```bash
+kubectl get configmap prometheus-k8s-rulefiles-0 -n monitoring -o yaml
+```
+
+The output is quite large, so here’s a small snippet showing an example alert:
+
+```bash
+- alert: KubeMemoryOvercommit
+  annotations:
+    description: Cluster {{ $labels.cluster }} has overcommitted memory resource
+      requests for Pods by {{ $value | humanize }} bytes and cannot tolerate node
+      failure.
+    runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubememoryovercommit
+    summary: Cluster has overcommitted memory resource requests.
+  expr: |
+    # Non-HA clusters.
+    (
+      (
+        sum by(cluster) (namespace_memory:kube_pod_container_resource_requests:sum{})
+        -
+        sum by(cluster) (kube_node_status_allocatable{job="kube-state-metrics",resource="memory"}) > 0
+      )
+      and
+      count by (cluster) (max by (cluster, node) (kube_node_role{job="kube-state-metrics", role="control-plane"})) < 3
+    )
+    or
+    # HA clusters.
+    (
+      sum by(cluster) (namespace_memory:kube_pod_container_resource_requests:sum{})
+      -
+      (
+        # Skip clusters with only one allocatable node.
+        (
+          sum by (cluster) (kube_node_status_allocatable{job="kube-state-metrics",resource="memory"})
+          -
+          max by (cluster) (kube_node_status_allocatable{job="kube-state-metrics",resource="memory"})
+        ) > 0
+      ) > 0
+    )
+  for: 10m
+  labels:
+    severity: warning
+```
+
+This alert is called ``KubeMemoryOvercommit`` and it triggers when the cluster has more memory requested by Pods than what is available on the nodes. Its definition is the same as the alert rules we used on a standalone Prometheus installation.
+
+&nbsp;
+### Creating a new alert
+
+Now that we know where alert rules are stored, let’s create a new alert to monitor Nginx.
+
+Before that, we need to understand what a PrometheusRule resource is.
+
+&nbsp;
+### What is a PrometheusRule?
+
+A PrometheusRule is a Kubernetes resource installed when we applied the kube-prometheus CRDs. It allows you to define alert rules for Prometheus, very similar to the alert files used in a traditional Prometheus setup — but now managed as Kubernetes resources.
+
+&nbsp;
+### Creating a PrometheusRule
+
+Create a file called ``nginx-prometheus-rule.yaml`` with the following content:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: nginx-prometheus-rule
+  namespace: monitoring
+  labels:
+    prometheus: k8s
+    role: alert-rules
+    app.kubernetes.io/name: kube-prometheus
+    app.kubernetes.io/part-of: kube-prometheus
+spec:
+  groups:
+  - name: nginx-prometheus-rule
+    rules:
+    - alert: NginxDown
+      expr: up{job="nginx"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Nginx is down"
+        description: "Nginx is down for more than 1 minute. Pod name: {{ $labels.pod }}"
+```
+
+Apply the PrometheusRule:
+
+```bash
+kubectl apply -f nginx-prometheus-rule.yaml
+```
+
+Verify that it was created successfully:
+
+```bash
+kubectl get prometheusrules -n monitoring
+```
+
+Now we have a new alert configured in Prometheus. Since Prometheus is integrated with Alertmanager, when the alert is triggered it will be sent to Alertmanager, which can forward notifications to Slack, email, or any other configured receiver.
+
+At this point, we can confidently say that we understand how to create new targets and alerts in Prometheus running on Kubernetes with the Prometheus Operator.
+
+That’s a wrap for today!
+Review everything you learned, practice it, and keep experimenting with new alerts and services in your Kubernetes cluster. We’ll see more cool stuff in the next module!
