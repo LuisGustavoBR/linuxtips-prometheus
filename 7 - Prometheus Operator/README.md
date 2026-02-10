@@ -764,6 +764,8 @@ kubectl get prometheusrules -n monitoring
 
 Now we have a new alert configured in Prometheus. Since Prometheus is integrated with Alertmanager, when the alert is triggered it will be sent to Alertmanager, which can forward notifications to Slack, email, or any other configured receiver.
 
+![nginx-prometheus-rule](nginx-prometheus-rule.png)
+
 At this point, we can confidently say that we understand how to create new targets and alerts in Prometheus running on Kubernetes with the Prometheus Operator.
 
 That’s a wrap for today!
