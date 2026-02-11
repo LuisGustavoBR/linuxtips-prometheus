@@ -186,9 +186,83 @@ kube_endpoint_address{ready="false"}
 &nbsp;
 ### Customizing Prometheus
 
-The `Prometheus` CRD allows us to configure the Prometheus instance running in the cluster.
+When we installed kube-prometheus, several Custom Resource Definitions (CRDs) were created in our cluster. We have already seen some of them, such as `ServiceMonitor` and `PrometheusRule`. However, our focus now will be on two other CRDs: `Prometheus` and `Alertmanager`.
 
-Example configuration snippet to define resource requests and limits:
+The `Prometheus` resource allows us to configure the Prometheus instance running in our cluster. The `Alertmanager` resource allows us to configure the Alertmanager instance.
+
+Let’s start by focusing on the `Prometheus` resource.
+
+&nbsp;
+### Defining Our Prometheus
+
+As mentioned earlier, the `Prometheus` resource allows us to configure and customize Prometheus according to our needs.
+
+The file below is the default configuration created when installing kube-prometheus. It is located inside the `manifests/` directory of the kube-prometheus repository and is called `prometheus-prometheus.yaml`.
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  labels:
+    app.kubernetes.io/component: prometheus
+    app.kubernetes.io/instance: k8s
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: kube-prometheus
+    app.kubernetes.io/version: 3.9.1
+  name: k8s
+  namespace: monitoring
+spec:
+  alerting:
+    alertmanagers:
+    - apiVersion: v2
+      name: alertmanager-main
+      namespace: monitoring
+      port: web
+  enableFeatures: []
+  externalLabels: {}
+  image: quay.io/prometheus/prometheus:v3.9.1
+  nodeSelector:
+    kubernetes.io/os: linux
+  podMetadata:
+    labels:
+      app.kubernetes.io/component: prometheus
+      app.kubernetes.io/instance: k8s
+      app.kubernetes.io/name: prometheus
+      app.kubernetes.io/part-of: kube-prometheus
+      app.kubernetes.io/version: 3.9.1
+  podMonitorNamespaceSelector: {}
+  podMonitorSelector: {}
+  probeNamespaceSelector: {}
+  probeSelector: {}
+  replicas: 2
+  resources:
+    requests:
+      memory: 400Mi
+  ruleNamespaceSelector: {}
+  ruleSelector: {}
+  scrapeConfigNamespaceSelector: {}
+  scrapeConfigSelector: {}
+  securityContext:
+    fsGroup: 2000
+    runAsNonRoot: true
+    runAsUser: 1000
+  serviceAccountName: prometheus-k8s
+  serviceDiscoveryRole: EndpointSlice
+  serviceMonitorNamespaceSelector: {}
+  serviceMonitorSelector: {}
+  version: 3.9.1
+```
+
+This is the default file created during kube-prometheus installation, located in the `manifests/` directory.
+
+In the example above, comments were added to explain what each section does.
+
+If you want to modify the running Prometheus instance, simply edit this file and apply the changes to the cluster.
+
+&nbsp;
+### Adding CPU and Memory Limits
+
+For example, if you want to define CPU and memory limits for Prometheus, add the following under the `spec:` section (maintaining the correct indentation):
 
 ```yaml
 resources:
@@ -200,27 +274,80 @@ resources:
     cpu: 900m
 ```
 
-Apply changes:
+Now apply the changes:
 
 ```bash
 kubectl apply -f prometheus.yaml
 ```
 
-Verify:
+Verify that the configuration has been updated:
 
 ```bash
 kubectl get pods -n monitoring prometheus-k8s-0 -o yaml | grep -A 10 resources:
 ```
 
+If everything is correct, you should see the updated CPU and memory requests/limits.
+
+There are many other configurations you can modify in Prometheus, such as adding alert rules, adjusting selectors for monitored resources, and more.
+
+The best way to learn is by testing and exploring the available options.
+
 &nbsp;
-### Customizing Alertmanager
+### Defining Our Alertmanager
 
-The `Alertmanager` CRD allows configuration of the Alertmanager instance.
+Just like Prometheus, Alertmanager is also defined using a CRD.
 
-Apply updates:
+The default configuration file created during kube-prometheus installation is located in the `manifests/` directory and is called `alertmanager-alertmanager.yaml`.
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: Alertmanager
+metadata:
+  labels:
+    app.kubernetes.io/component: alert-router
+    app.kubernetes.io/instance: main
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/part-of: kube-prometheus
+    app.kubernetes.io/version: 0.30.1
+  name: main
+  namespace: monitoring
+spec:
+  alertmanagerConfigSelector: {}
+  image: quay.io/prometheus/alertmanager:v0.30.1
+  nodeSelector:
+    kubernetes.io/os: linux
+  podMetadata:
+    labels:
+      app.kubernetes.io/component: alert-router
+      app.kubernetes.io/instance: main
+      app.kubernetes.io/name: alertmanager
+      app.kubernetes.io/part-of: kube-prometheus
+      app.kubernetes.io/version: 0.30.1
+  replicas: 3
+  resources:
+    limits:
+      cpu: 100m
+      memory: 100Mi
+    requests:
+      cpu: 4m
+      memory: 100Mi
+  secrets: []
+  securityContext:
+    fsGroup: 2000
+    runAsNonRoot: true
+    runAsUser: 1000
+  serviceAccountName: alertmanager-main
+  version: 0.30.1
+```
+
+As with Prometheus, comments were added to explain each section of the configuration.
+
+If you need to modify the running Alertmanager instance, edit the file and apply the changes:
 
 ```bash
 kubectl apply -f alertmanager-alertmanager.yaml
 ```
 
-Always refer to the official documentation to explore all available configuration options.
+After applying the changes, your Alertmanager will be updated.
+
+Always refer to the official documentation to fully understand all available configuration options.
