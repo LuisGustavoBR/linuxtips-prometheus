@@ -56,6 +56,12 @@ The repository is organized into modules, each focused on a specific Prometheus 
 - Dynamic target discovery using labels
 - Creating custom PrometheusRule alerts
 
+### Module 8: Advanced PromQL and Prometheus Customization
+- Exploring Kubernetes cluster metrics using PromQL
+- Analyzing nodes, pods, deployments, and services health
+- Identifying resource issues (CPU, memory, disk, network)
+- Customizing Prometheus and Alertmanager using CRDs
+
 ## Usage
 
 Each module folder contains its own README with objectives, configuration files, and step-by-step exercises.  
