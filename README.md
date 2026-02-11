@@ -62,6 +62,12 @@ The repository is organized into modules, each focused on a specific Prometheus 
 - Identifying resource issues (CPU, memory, disk, network)
 - Customizing Prometheus and Alertmanager using CRDs
 
+### Module 9: Relabeling and Meta Labels
+- Understanding relabeling concepts and configuration
+- Manipulating labels (add, remove, merge, filter)
+- Using relabeling in ServiceMonitor and PodMonitor
+- Working with Prometheus meta labels (Kubernetes and Cloud providers)
+
 ## Usage
 
 Each module folder contains its own README with objectives, configuration files, and step-by-step exercises.  
@@ -88,5 +94,4 @@ Always validate your setup and consult the official Prometheus documentation for
 ## Credits
 
 Original training by **LinuxTips**  
-Hands-on notes and exercises compiled by **[Luis Gustavo Bordon]**
-
+Hands-on notes and exercises compiled by **Luis Gustavo Bordon**
