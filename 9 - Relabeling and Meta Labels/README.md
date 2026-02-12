@@ -84,11 +84,11 @@ There are many other actions available — always check the official documentati
 
 If you want to drop all metrics that contain a specific label:
 
-``yaml
+```yaml
 relabelings:
   - sourceLabels: [app]
     action: drop
-``
+```
 
 All metrics containing the label `app` will be discarded.
 
@@ -99,13 +99,13 @@ All metrics containing the label `app` will be discarded.
 
 Example: merge `app` and `team` into a new label called `app_team`.
 
-``yaml
+```yaml
 relabelings:
   - sourceLabels: [app, team]
     targetLabel: app_team
     regex: (.*);(.*)
     replacement: ${1}_${2}
-``
+```
 
 This creates a new label like:
 
@@ -116,24 +116,24 @@ This creates a new label like:
 
 Suppose your cluster runs in `us-east-1` and you want to add a `region` label:
 
-``yaml
+```yaml
 relabelings:
   - sourceLabels: []
     targetLabel: region
     replacement: us-east-1
-``
+```
 
 &nbsp;
 ### Storing only specific metrics
 
 If you only want to store metrics where `app` is `nginx` or `redis`:
 
-``yaml
+```
 relabelings:
   - sourceLabels: [app]
     regex: '(nginx|redis)'
     action: keep
-``
+```
 
 This keeps only metrics matching those values.
 
@@ -144,7 +144,7 @@ To dynamically map all labels from a Service:
 
 Example Service:
 
-``yaml
+```yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -161,15 +161,15 @@ spec:
     name: metrics
   selector:
     app: nginx
-``
+```
 
 Relabel rule:
 
-``yaml
+```yaml
 relabelings:
   - action: labelmap
     regex: __meta_kubernetes_service_label_(.+)
-``
+```
 
 This maps all Service labels into metric labels.
 
@@ -182,10 +182,10 @@ Example:
 
 If your Service has:
 
-``yaml
+```yaml
 labels:
   team: platform-engineering
-``
+```
 
 Prometheus automatically creates:
 
@@ -205,7 +205,9 @@ Prometheus automatically creates:
 
 Full list:
 
+```html
 https://prometheus.io/docs/prometheus/latest/configuration/configuration/#kubernetes_sd_config
+```
 
 &nbsp;
 ### Cloud Provider Meta Labels
@@ -229,4 +231,6 @@ Prometheus also supports cloud provider meta labels.
 
 Always check the official documentation for the full list:
 
+```html
 https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+```
